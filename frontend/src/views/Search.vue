@@ -60,7 +60,7 @@
     <div v-if="searchStore.results">
       <div class="result-header">
         <span class="result-count">
-          找到 <strong>{{ searchStore.results.total }}</strong> 条结果
+          找到 <strong>{{ searchStore.results.total || 0 }}</strong> 条结果
           <span v-if="searchStore.results.took" class="result-time">
             (耗时 {{ searchStore.results.took }}ms)
           </span>
@@ -77,7 +77,7 @@
       <!-- 结果列表 -->
       <div class="result-list" v-loading="searchStore.loading">
         <div
-          v-for="item in searchStore.results.items"
+          v-for="item in (searchStore.results.items || [])"
           :key="item.id"
           class="result-item"
           @click="viewTable(item.id)"
@@ -90,13 +90,13 @@
               <el-icon class="result-icon"><Grid /></el-icon>
               <span
                 class="font-mono result-name"
-                v-html="getHighlight(item, 'tableName') || `${item.databaseName}.${item.tableName}`"
+                v-html="getHighlight(item, 'tableName') || `${item.databaseName || ''}.${item.tableName || ''}`"
               ></span>
               <el-tag :type="tableTypeTag(item.tableType)" size="small">
                 {{ tableTypeLabel(item.tableType) }}
               </el-tag>
             </div>
-            <span class="result-time text-muted">{{ formatDate(item.updatedAt) }}</span>
+            <span class="result-time text-muted">{{ item.updatedAt ? formatDate(item.updatedAt) : '' }}</span>
           </div>
 
           <div class="result-desc" v-if="item.description || getHighlight(item, 'description')">
@@ -109,7 +109,7 @@
           <div class="result-meta">
             <span class="meta-item">
               <el-icon><FolderOpened /></el-icon>
-              {{ item.databaseName }}
+              {{ item.databaseName || '' }}
             </span>
             <span v-if="item.score" class="meta-item">
               <el-icon><Star /></el-icon>
@@ -118,12 +118,12 @@
           </div>
         </div>
 
-        <el-empty v-if="searchStore.results.items.length === 0" description="未找到匹配的结果" />
+        <el-empty v-if="!searchStore.results.items || searchStore.results.items.length === 0" description="未找到匹配的结果" />
       </div>
 
       <!-- 分页 -->
       <Pagination
-        :total="searchStore.results.total"
+        :total="searchStore.results.total || 0"
         :page="currentPage"
         :page-size="pageSize"
         @change="handlePageChange"
@@ -238,8 +238,9 @@ function viewTable(id: number) {
 }
 
 function getHighlight(item: any, field: string): string {
-  const highlights = item.highlight?.[field]
-  if (highlights && highlights.length > 0) {
+  if (!item || !item.highlight) return ''
+  const highlights = item.highlight[field]
+  if (highlights && Array.isArray(highlights) && highlights.length > 0) {
     return highlights[0].replace(/<em>/g, '<mark class="search-highlight">').replace(/<\/em>/g, '</mark>')
   }
   return ''

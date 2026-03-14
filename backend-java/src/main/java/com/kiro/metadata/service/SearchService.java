@@ -214,21 +214,42 @@ public class SearchService {
                     TableDocument.class
             );
 
-            List<Map<String, Object>> results = new ArrayList<>();
+            List<Map<String, Object>> items = new ArrayList<>();
             for (Hit<TableDocument> hit : response.hits().hits()) {
-                Map<String, Object> result = new HashMap<>();
-                result.put("document", hit.source());
-                result.put("score", hit.score());
-                result.put("highlights", hit.highlight());
-                results.add(result);
+                TableDocument doc = hit.source();
+                if (doc != null) {
+                    Map<String, Object> item = new HashMap<>();
+                    // 转换为前端期望的格式
+                    try {
+                        item.put("id", Long.parseLong(doc.getId()));
+                    } catch (NumberFormatException e) {
+                        item.put("id", doc.getId());
+                    }
+                    item.put("databaseName", doc.getDatabaseName());
+                    item.put("tableName", doc.getTableName());
+                    item.put("tableType", doc.getTableType());
+                    item.put("description", doc.getDescription());
+                    item.put("score", hit.score());
+                    item.put("updatedAt", doc.getUpdatedAt() != null ? doc.getUpdatedAt().toString() : null);
+                    
+                    // 处理高亮
+                    Map<String, List<String>> highlights = new HashMap<>();
+                    if (hit.highlight() != null) {
+                        hit.highlight().forEach((key, values) -> highlights.put(key, values));
+                    }
+                    item.put("highlight", highlights);
+                    
+                    items.add(item);
+                }
             }
 
             Map<String, Object> searchResult = new HashMap<>();
-            searchResult.put("results", results);
+            searchResult.put("items", items);
             searchResult.put("total", response.hits().total().value());
-            searchResult.put("page", page);
+            searchResult.put("page", page + 1); // 前端期望从1开始
             searchResult.put("pageSize", pageSize);
-
+            searchResult.put("totalPages", (int) Math.ceil((double) response.hits().total().value() / pageSize));
+            
             log.info("搜索完成, 找到 {} 条结果", response.hits().total().value());
             return searchResult;
 
@@ -312,15 +333,32 @@ public class SearchService {
                     TableDocument.class
             );
 
-            List<TableDocument> results = response.hits().hits().stream()
-                    .map(Hit::source)
-                    .collect(Collectors.toList());
+            List<Map<String, Object>> items = new ArrayList<>();
+            for (Hit<TableDocument> hit : response.hits().hits()) {
+                TableDocument doc = hit.source();
+                if (doc != null) {
+                    Map<String, Object> item = new HashMap<>();
+                    try {
+                        item.put("id", Long.parseLong(doc.getId()));
+                    } catch (NumberFormatException e) {
+                        item.put("id", doc.getId());
+                    }
+                    item.put("databaseName", doc.getDatabaseName());
+                    item.put("tableName", doc.getTableName());
+                    item.put("tableType", doc.getTableType());
+                    item.put("description", doc.getDescription());
+                    item.put("updatedAt", doc.getUpdatedAt() != null ? doc.getUpdatedAt().toString() : null);
+                    
+                    items.add(item);
+                }
+            }
 
             Map<String, Object> filterResult = new HashMap<>();
-            filterResult.put("results", results);
+            filterResult.put("items", items);
             filterResult.put("total", response.hits().total().value());
-            filterResult.put("page", page);
+            filterResult.put("page", page + 1);
             filterResult.put("pageSize", pageSize);
+            filterResult.put("totalPages", (int) Math.ceil((double) response.hits().total().value() / pageSize));
 
             log.info("过滤完成, 找到 {} 条结果", response.hits().total().value());
             return filterResult;

@@ -15,7 +15,17 @@ export const useSearchStore = defineStore('search', () => {
     loading.value = true
     try {
       const response = await searchApi.searchTables(params)
-      results.value = response.data
+      // 后端返回的数据格式是: { success: true, message: "搜索成功", data: { results: [...], total: ... } }
+      // 前端期望的格式是: { items: [...], total: ... }
+      const apiData = response.data?.data || response.data
+      results.value = {
+        items: apiData?.results || apiData?.items || [],
+        total: apiData?.total || 0,
+        page: apiData?.page || 1,
+        pageSize: apiData?.pageSize || 20,
+        totalPages: apiData?.totalPages || 1,
+        took: apiData?.took
+      } as SearchResponse
 
       // 记录搜索历史
       if (params.keyword && !searchHistory.value.includes(params.keyword)) {
