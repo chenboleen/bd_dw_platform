@@ -271,8 +271,9 @@ async function handleCsvImport() {
   importResult.value = null
   try {
     const res = await importExportApi.importFromCsv(csvFile.value)
-    importResult.value = res.data
-    ElMessage.success(`导入完成：成功 ${res.data.successCount} 条`)
+    const apiData = res.data?.data || res.data
+    importResult.value = apiData
+    ElMessage.success(`导入完成：成功 ${apiData.successCount} 条`)
   } finally {
     csvImporting.value = false
   }
@@ -284,8 +285,9 @@ async function handleJsonImport() {
   importResult.value = null
   try {
     const res = await importExportApi.importFromJson(jsonFile.value)
-    importResult.value = res.data
-    ElMessage.success(`导入完成：成功 ${res.data.successCount} 条`)
+    const apiData = res.data?.data || res.data
+    importResult.value = apiData
+    ElMessage.success(`导入完成：成功 ${apiData.successCount} 条`)
   } finally {
     jsonImporting.value = false
   }
@@ -313,7 +315,8 @@ async function loadExportTasks() {
   tasksLoading.value = true
   try {
     const res = await importExportApi.listExportTasks()
-    exportTasks.value = res.data?.data?.items || []
+    const apiData = res.data?.data || res.data
+    exportTasks.value = apiData?.data || apiData?.items || []
   } catch {
     exportTasks.value = []
   } finally {

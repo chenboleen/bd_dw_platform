@@ -204,7 +204,7 @@ async function loadQualityData() {
   metricsLoading.value = true
   try {
     const res = await qualityApi.getQualityMetrics(selectedTableId.value)
-    currentMetrics.value = res.data
+    currentMetrics.value = res.data?.data || res.data
   } catch {
     currentMetrics.value = null
   } finally {
@@ -218,7 +218,7 @@ async function loadTrend() {
   trendLoading.value = true
   try {
     const res = await qualityApi.getQualityTrend(selectedTableId.value, trendDays.value)
-    trendData.value = res.data
+    trendData.value = res.data?.data || res.data || []
     await nextTick()
     renderCharts()
   } finally {
