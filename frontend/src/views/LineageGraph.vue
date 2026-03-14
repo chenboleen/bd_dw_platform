@@ -290,7 +290,7 @@ async function loadGraph() {
   graphLoading.value = true
   try {
     const res = await lineageApi.getLineageGraph(selectedTableId.value, direction.value, depth.value)
-    graphData.value = res.data
+    graphData.value = res.data?.data || res.data
     await nextTick()
     renderChart()
   } catch {
@@ -305,7 +305,7 @@ async function loadImpact() {
   impactLoading.value = true
   try {
     const res = await lineageApi.analyzeImpact(selectedTableId.value)
-    impactReport.value = res.data
+    impactReport.value = res.data?.data || res.data
   } finally {
     impactLoading.value = false
   }
@@ -319,8 +319,9 @@ async function parseSql() {
   sqlParsing.value = true
   try {
     const res = await lineageApi.parseSqlLineage(sqlText.value)
-    parsedLineages.value = res.data
-    ElMessage.success(`解析完成，发现 ${res.data.length} 条血缘关系`)
+    parsedLineages.value = res.data?.data || res.data || []
+    const lineagesData = res.data?.data || res.data || []
+    ElMessage.success(`解析完成，发现 ${lineagesData.length} 条血缘关系`)
   } finally {
     sqlParsing.value = false
   }

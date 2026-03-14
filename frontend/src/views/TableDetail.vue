@@ -266,13 +266,13 @@ async function loadData() {
       tableApi.getTableById(id),
       tableApi.getTableColumns(id)
     ])
-    table.value = tableRes.data
-    columns.value = columnsRes.data
+    table.value = tableRes.data?.data || tableRes.data
+    columns.value = columnsRes.data?.data || columnsRes.data || []
 
     // 加载质量指标
     try {
       const qualityRes = await qualityApi.getQualityMetrics(id)
-      qualityMetrics.value = qualityRes.data
+      qualityMetrics.value = qualityRes.data?.data || qualityRes.data
     } catch { /* 忽略质量数据加载失败 */ }
 
     // 初始化编辑表单

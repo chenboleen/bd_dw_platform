@@ -241,7 +241,7 @@ async function loadCatalogTree() {
   treeLoading.value = true
   try {
     const res = await catalogApi.getCatalogTree()
-    catalogTree.value = res.data
+    catalogTree.value = res.data?.data || res.data || []
   } finally {
     treeLoading.value = false
   }
@@ -252,7 +252,7 @@ async function handleNodeClick(data: Catalog) {
   tablesLoading.value = true
   try {
     const res = await catalogApi.getTablesInCatalog(data.id)
-    catalogTables.value = res.data
+    catalogTables.value = res.data?.data || res.data || []
   } finally {
     tablesLoading.value = false
   }
