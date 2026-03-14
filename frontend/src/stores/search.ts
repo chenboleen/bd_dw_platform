@@ -17,9 +17,9 @@ export const useSearchStore = defineStore('search', () => {
       const response = await searchApi.searchTables(params)
       // 后端返回的数据格式是: { success: true, message: "搜索成功", data: { results: [...], total: ... } }
       // 前端期望的格式是: { items: [...], total: ... }
-      const apiData = response.data?.data || response.data
+      const apiData = response.data?.data ?? response.data
       results.value = {
-        items: apiData?.results || apiData?.items || [],
+        items: apiData?.items || [],
         total: apiData?.total || 0,
         page: apiData?.page || 1,
         pageSize: apiData?.pageSize || 20,

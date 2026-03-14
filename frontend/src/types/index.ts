@@ -20,6 +20,13 @@ export interface ApiResponse<T = void> {
   requestId?: string
 }
 
+// 后端统一成功响应格式
+export interface SuccessResponse<T = any> {
+  success: boolean
+  message: string
+  data: T
+}
+
 /** 错误响应 */
 export interface ErrorResponse {
   errorCode: string
@@ -71,6 +78,7 @@ export type TableType = 'TABLE' | 'VIEW' | 'EXTERNAL'
 
 /** 表元数据 */
 export interface TableMetadata {
+  data: TableMetadata
   id: number
   databaseName: string
   tableName: string

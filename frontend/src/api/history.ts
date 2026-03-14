@@ -1,6 +1,5 @@
 // 变更历史相关 API
 import apiClient from './client'
-import type { ChangeHistory, PagedResponse } from '@/types'
 
 /** 获取实体变更历史 */
 export const getEntityHistory = (entityType: string, entityId: number, page = 1, pageSize = 20) =>

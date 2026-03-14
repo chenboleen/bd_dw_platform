@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as tableApi from '@/api/tables'
-import type { TableMetadata, TableFilter, PaginationParams, PagedResponse } from '@/types'
+import type { TableMetadata, TableFilter, PaginationParams } from '@/types'
 import { ElMessage } from 'element-plus'
 
 export const useTableStore = defineStore('table', () => {
@@ -22,11 +22,12 @@ export const useTableStore = defineStore('table', () => {
     loading.value = true
     try {
       const response = await tableApi.listTables(filter.value, pagination.value)
-      const data = response.data
-      tables.value = (data?.data || []) as TableMetadata[]
-      total.value = data?.total || 0
-      if (data?.page) pagination.value.page = data.page
-      if (data?.size) pagination.value.pageSize = data.size
+      const apiData: any = response.data?.data || response.data
+      const rawTables = apiData?.items || apiData?.data || []
+      tables.value = Array.isArray(rawTables) ? rawTables : []
+      total.value = apiData?.total || 0
+      if (apiData?.page) pagination.value.page = apiData.page
+      if (apiData?.pageSize || apiData?.size) pagination.value.pageSize = apiData?.pageSize || apiData?.size
     } catch {
       tables.value = []
       total.value = 0
@@ -41,8 +42,9 @@ export const useTableStore = defineStore('table', () => {
     loading.value = true
     try {
       const response = await tableApi.getTableById(id)
-      currentTable.value = response.data
-      return response.data
+      const apiData: any = response.data?.data || response.data
+      currentTable.value = apiData
+      return apiData
     } catch {
       ElMessage.error('获取表详情失败')
       return null

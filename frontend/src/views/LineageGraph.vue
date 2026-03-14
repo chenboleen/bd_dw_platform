@@ -288,11 +288,20 @@ async function searchTables(query: string) {
 async function loadGraph() {
   if (!selectedTableId.value) return
   graphLoading.value = true
+  graphData.value = null
   try {
     const res = await lineageApi.getLineageGraph(selectedTableId.value, direction.value, depth.value)
-    graphData.value = res.data?.data || res.data
+    // 后端响应结构：{ data: { nodes, edges }, success, message }
+    const payload = res.data?.data ?? res.data
+    graphData.value = (payload?.nodes && payload?.edges) ? payload : null
+    if (!graphData.value) {
+      ElMessage.warning('暂无血缘数据')
+      return
+    }
+    // 等待 DOM 渲染完成后再初始化图表
     await nextTick()
-    renderChart()
+    // 额外等待一帧，确保容器完成布局
+    setTimeout(renderChart, 50)
   } catch {
     ElMessage.error('加载血缘图谱失败')
   } finally {
@@ -348,16 +357,26 @@ function resetGraph() {
   graphData.value = null
   impactReport.value = null
   if (chartInstance) {
-    chartInstance.clear()
+    chartInstance.dispose()
+    chartInstance = null
   }
 }
 
 function renderChart() {
   if (!chartRef.value || !graphData.value) return
 
-  if (!chartInstance) {
-    chartInstance = echarts.init(chartRef.value)
+  // 确保容器有实际尺寸
+  const container = chartRef.value
+  if (container.clientWidth === 0 || container.clientHeight === 0) {
+    // 容器还没有尺寸，再等一帧
+    setTimeout(renderChart, 100)
+    return
   }
+
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+  chartInstance = echarts.init(container)
 
   const { nodes, edges } = graphData.value
 

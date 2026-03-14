@@ -75,7 +75,7 @@ public class TableController {
         @ApiResponse(responseCode = "403", description = "权限不足"),
         @ApiResponse(responseCode = "409", description = "表已存在")
     })
-    public ResponseEntity<TableResponse> createTable(
+    public ResponseEntity<Map<String, Object>> createTable(
             @Valid @RequestBody TableCreateRequest request) {
         log.info("创建表元数据请求: {}.{}", request.getDatabaseName(), request.getTableName());
 
@@ -89,7 +89,7 @@ public class TableController {
         TableResponse response = convertToResponse(created);
 
         log.info("表元数据创建成功, ID: {}", created.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(buildSuccessResponse("表元数据创建成功", response));
     }
 
     /**
@@ -119,7 +119,7 @@ public class TableController {
         ),
         @ApiResponse(responseCode = "401", description = "未认证")
     })
-    public ResponseEntity<PagedResponse<TableResponse>> listTables(
+    public ResponseEntity<Map<String, Object>> listTables(
             @Parameter(description = "数据库名过滤")
             @RequestParam(required = false) String databaseName,
             @Parameter(description = "表类型过滤（TABLE/VIEW/EXTERNAL）")
@@ -166,15 +166,14 @@ public class TableController {
 
         int totalPages = (int) Math.ceil((double) pageResult.getTotal() / pageSize);
 
-        PagedResponse<TableResponse> response = PagedResponse.<TableResponse>builder()
-            .data(tableResponses)
-            .page(page)
-            .size(pageSize)
-            .total(pageResult.getTotal())
-            .totalPages(totalPages)
-            .build();
+        Map<String, Object> pagedData = new HashMap<>();
+        pagedData.put("items", tableResponses);
+        pagedData.put("total", pageResult.getTotal());
+        pagedData.put("page", page);
+        pagedData.put("pageSize", pageSize);
+        pagedData.put("totalPages", totalPages);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildSuccessResponse("查询表列表成功", pagedData));
     }
 
     /**
@@ -198,7 +197,7 @@ public class TableController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
-    public ResponseEntity<TableResponse> getTableById(
+    public ResponseEntity<Map<String, Object>> getTableById(
             @Parameter(description = "表ID", required = true)
             @PathVariable Long id) {
         log.debug("获取表详情, ID: {}", id);
@@ -206,7 +205,7 @@ public class TableController {
         TableMetadata table = metadataService.getTableById(id);
         TableResponse response = convertToResponse(table);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildSuccessResponse("获取表详情成功", response));
     }
 
     /**
@@ -234,7 +233,7 @@ public class TableController {
         @ApiResponse(responseCode = "403", description = "权限不足"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
-    public ResponseEntity<TableResponse> updateTable(
+    public ResponseEntity<Map<String, Object>> updateTable(
             @Parameter(description = "表ID", required = true)
             @PathVariable Long id,
             @Valid @RequestBody TableUpdateRequest request) {
@@ -252,7 +251,7 @@ public class TableController {
         TableResponse response = convertToResponse(updated);
 
         log.info("表元数据更新成功, ID: {}", id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildSuccessResponse("表元数据更新成功", response));
     }
 
     /**
@@ -310,7 +309,7 @@ public class TableController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
-    public ResponseEntity<List<ColumnResponse>> getColumnsByTableId(
+    public ResponseEntity<Map<String, Object>> getColumnsByTableId(
             @Parameter(description = "表ID", required = true)
             @PathVariable Long id) {
         log.debug("获取表的字段列表, 表ID: {}", id);
@@ -326,7 +325,7 @@ public class TableController {
             .map(this::convertColumnToResponse)
             .collect(Collectors.toList());
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildSuccessResponse("获取表的字段列表成功", response));
     }
 
     // ==================== 私有辅助方法 ====================
@@ -392,6 +391,17 @@ public class TableController {
             .createdAt(column.getCreatedAt())
             .updatedAt(column.getUpdatedAt())
             .build();
+    }
+
+    /**
+     * 构建统一成功响应格式
+     */
+    private Map<String, Object> buildSuccessResponse(String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        response.put("data", data);
+        return response;
     }
 
     /**

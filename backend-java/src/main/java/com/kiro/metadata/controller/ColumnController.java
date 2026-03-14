@@ -68,7 +68,7 @@ public class ColumnController {
         @ApiResponse(responseCode = "403", description = "权限不足"),
         @ApiResponse(responseCode = "404", description = "关联的表不存在")
     })
-    public ResponseEntity<ColumnResponse> createColumn(
+    public ResponseEntity<Map<String, Object>> createColumn(
             @Valid @RequestBody ColumnCreateRequest request) {
         log.info("创建字段元数据请求, 表ID: {}, 字段名: {}", request.getTableId(), request.getColumnName());
 
@@ -83,7 +83,7 @@ public class ColumnController {
         ColumnResponse response = convertToResponse(created);
 
         log.info("字段元数据创建成功, ID: {}", created.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(buildSuccessResponse("字段元数据创建成功", response));
     }
 
     /**
@@ -111,7 +111,7 @@ public class ColumnController {
         @ApiResponse(responseCode = "403", description = "权限不足"),
         @ApiResponse(responseCode = "404", description = "字段不存在")
     })
-    public ResponseEntity<ColumnResponse> updateColumn(
+    public ResponseEntity<Map<String, Object>> updateColumn(
             @Parameter(description = "字段ID", required = true)
             @PathVariable Long id,
             @Valid @RequestBody ColumnUpdateRequest request) {
@@ -132,7 +132,7 @@ public class ColumnController {
         ColumnResponse response = convertToResponse(updated);
 
         log.info("字段元数据更新成功, ID: {}", id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(buildSuccessResponse("字段元数据更新成功", response));
     }
 
     /**
@@ -194,14 +194,12 @@ public class ColumnController {
         Long userId = getCurrentUserId();
         columnService.reorderColumns(request.getTableId(), request.getColumnIds(), userId);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("message", "字段顺序调整成功");
-        result.put("tableId", request.getTableId());
-        result.put("count", request.getColumnIds().size());
+        Map<String, Object> resultData = new HashMap<>();
+        resultData.put("tableId", request.getTableId());
+        resultData.put("count", request.getColumnIds().size());
 
         log.info("字段顺序调整成功, 表ID: {}", request.getTableId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(buildSuccessResponse("字段顺序调整成功", resultData));
     }
 
     // ==================== 私有辅助方法 ====================
@@ -243,6 +241,17 @@ public class ColumnController {
             .createdAt(column.getCreatedAt())
             .updatedAt(column.getUpdatedAt())
             .build();
+    }
+
+    /**
+     * 构建统一成功响应格式
+     */
+    private Map<String, Object> buildSuccessResponse(String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        response.put("data", data);
+        return response;
     }
 
     /**

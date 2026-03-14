@@ -25,6 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -70,7 +71,7 @@ public class LineageController {
         @ApiResponse(responseCode = "403", description = "权限不足"),
         @ApiResponse(responseCode = "404", description = "源表或目标表不存在")
     })
-    public ResponseEntity<LineageResponse> createLineage(
+    public ResponseEntity<Map<String, Object>> createLineage(
             @Valid @RequestBody LineageCreateRequest request) {
         log.info("创建血缘关系请求: {} -> {}", request.getSourceTableId(), request.getTargetTableId());
 
@@ -84,7 +85,7 @@ public class LineageController {
         LineageResponse response = convertToResponse(created);
 
         log.info("血缘关系创建成功, ID: {}", created.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(buildSuccessResponse("血缘关系创建成功", response));
     }
 
     /**
@@ -135,14 +136,14 @@ public class LineageController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
-    public ResponseEntity<List<Long>> getUpstreamTables(
+    public ResponseEntity<Map<String, Object>> getUpstreamTables(
             @Parameter(description = "表ID", required = true)
             @PathVariable Long tableId) {
         log.debug("查询上游表, 表ID: {}", tableId);
 
         List<Long> upstreamTableIds = lineageService.getUpstreamTables(tableId);
 
-        return ResponseEntity.ok(upstreamTableIds);
+        return ResponseEntity.ok(buildSuccessResponse("查询上游表成功", upstreamTableIds));
     }
 
     /**
@@ -162,14 +163,14 @@ public class LineageController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
-    public ResponseEntity<List<Long>> getDownstreamTables(
+    public ResponseEntity<Map<String, Object>> getDownstreamTables(
             @Parameter(description = "表ID", required = true)
             @PathVariable Long tableId) {
         log.debug("查询下游表, 表ID: {}", tableId);
 
         List<Long> downstreamTableIds = lineageService.getDownstreamTables(tableId);
 
-        return ResponseEntity.ok(downstreamTableIds);
+        return ResponseEntity.ok(buildSuccessResponse("查询下游表成功", downstreamTableIds));
     }
 
     /**
@@ -203,7 +204,7 @@ public class LineageController {
 
         Map<String, Object> graph = lineageService.buildLineageGraph(tableId, direction, depth);
 
-        return ResponseEntity.ok(graph);
+        return ResponseEntity.ok(buildSuccessResponse("获取血缘图谱成功", graph));
     }
 
     /**
@@ -228,14 +229,14 @@ public class LineageController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
-    public ResponseEntity<ImpactReport> analyzeImpact(
+    public ResponseEntity<Map<String, Object>> analyzeImpact(
             @Parameter(description = "表ID", required = true)
             @PathVariable Long tableId) {
         log.info("影响分析请求, 表ID: {}", tableId);
 
         ImpactReport report = lineageService.analyzeImpact(tableId);
 
-        return ResponseEntity.ok(report);
+        return ResponseEntity.ok(buildSuccessResponse("影响分析成功", report));
     }
 
     /**
@@ -256,14 +257,14 @@ public class LineageController {
         @ApiResponse(responseCode = "400", description = "SQL语句为空或解析失败"),
         @ApiResponse(responseCode = "401", description = "未认证")
     })
-    public ResponseEntity<List<Map<String, String>>> parseSql(
+    public ResponseEntity<Map<String, Object>> parseSql(
             @RequestBody SqlParseRequest request) {
         log.info("SQL解析请求, SQL长度: {}", request.getSql() != null ? request.getSql().length() : 0);
 
         List<Map<String, String>> lineages = sqlParserService.extractLineageFromSql(request.getSql());
 
         log.info("SQL解析完成, 提取到{}条血缘关系", lineages.size());
-        return ResponseEntity.ok(lineages);
+        return ResponseEntity.ok(buildSuccessResponse("SQL解析完成", lineages));
     }
 
     // ==================== 私有辅助方法 ====================
@@ -301,6 +302,17 @@ public class LineageController {
             .updatedAt(lineage.getUpdatedAt())
             .createdBy(lineage.getCreatedBy())
             .build();
+    }
+
+    /**
+     * 构建统一成功响应格式
+     */
+    private Map<String, Object> buildSuccessResponse(String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        response.put("data", data);
+        return response;
     }
 
     /**
