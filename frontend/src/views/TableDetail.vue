@@ -60,6 +60,18 @@
               <el-descriptions-item label="创建时间">
                 {{ formatDate(table.createdAt) }}
               </el-descriptions-item>
+              <el-descriptions-item label="所有者">
+                {{ (table as any).ownerName || '-' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="所属数据域">
+                <template v-if="(table as any).catalogName">
+                  <el-tag size="small" type="info">{{ (table as any).catalogName }}</el-tag>
+                  <span class="text-muted" style="margin-left: 6px; font-size: 12px;">
+                    层级 {{ (table as any).catalogLevel }}
+                  </span>
+                </template>
+                <span v-else>-</span>
+              </el-descriptions-item>
               <el-descriptions-item label="存储路径" :span="2">
                 <span class="font-mono text-secondary">{{ table.storageLocation || '-' }}</span>
               </el-descriptions-item>

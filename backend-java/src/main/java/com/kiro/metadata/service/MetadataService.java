@@ -6,6 +6,7 @@ import com.kiro.metadata.document.TableDocument;
 import com.kiro.metadata.entity.ChangeHistory;
 import com.kiro.metadata.entity.OperationType;
 import com.kiro.metadata.entity.TableMetadata;
+import com.kiro.metadata.repository.CatalogRepository;
 import com.kiro.metadata.repository.ChangeHistoryRepository;
 import com.kiro.metadata.repository.TableRepository;
 import com.kiro.metadata.util.TableDocumentMapper;
@@ -20,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 表元数据服务
@@ -37,6 +38,7 @@ public class MetadataService {
     private final ChangeHistoryRepository changeHistoryRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final SearchService searchService;
+    private final CatalogRepository catalogRepository;
     
     private static final String CACHE_KEY_PREFIX = "table:";
     private static final long CACHE_TTL_HOURS = 1;
@@ -126,7 +128,7 @@ public class MetadataService {
     /**
      * 查询表列表(分页)
      * 
-     * @param filters 过滤条件
+     * @param filters 过滤条件（支持 keyword 模糊搜索表名+描述，catalogId 数据域过滤）
      * @param page 页码
      * @param pageSize 每页大小
      * @param sortBy 排序字段
@@ -157,9 +159,27 @@ public class MetadataService {
                 queryWrapper.eq("owner_id", filters.get("ownerId"));
             }
             
-            // 表名模糊查询
-            if (filters.containsKey("tableName")) {
-                queryWrapper.like("table_name", filters.get("tableName"));
+            // 关键词模糊查询（表名 OR 描述）
+            if (filters.containsKey("keyword")) {
+                String kw = filters.get("keyword").toString();
+                queryWrapper.and(w -> w.like("table_name", kw).or().like("description", kw));
+            }
+
+            // 数据域过滤：先查出该 catalog 下的 tableId 列表
+            if (filters.containsKey("catalogId")) {
+                Long cid = Long.valueOf(filters.get("catalogId").toString());
+                List<TableMetadata> tablesInCatalog = catalogRepository.getTablesInCatalog(cid);
+                if (tablesInCatalog.isEmpty()) {
+                    // 该数据域下无表，直接返回空结果
+                    Page<TableMetadata> emptyPage = new Page<>(page, pageSize);
+                    emptyPage.setTotal(0);
+                    emptyPage.setRecords(java.util.Collections.emptyList());
+                    return emptyPage;
+                }
+                List<Long> tableIds = tablesInCatalog.stream()
+                    .map(TableMetadata::getId)
+                    .collect(Collectors.toList());
+                queryWrapper.in("id", tableIds);
             }
         }
         
@@ -283,6 +303,38 @@ public class MetadataService {
         return result > 0;
     }
     
+    /**
+     * 全量同步所有表数据到 Elasticsearch
+     *
+     * @return 同步成功数量
+     */
+    public int syncAllToElasticsearch() {
+        log.info("开始全量同步表数据到 Elasticsearch");
+        try {
+            // 查询所有表（不分页）
+            QueryWrapper<TableMetadata> queryWrapper = new QueryWrapper<>();
+            queryWrapper.orderByAsc("id");
+            List<TableMetadata> allTables = tableRepository.selectList(queryWrapper);
+
+            if (allTables.isEmpty()) {
+                log.info("MySQL 中无表数据，跳过同步");
+                return 0;
+            }
+
+            // 转换为文档并批量索引
+            List<TableDocument> documents = allTables.stream()
+                    .map(TableDocumentMapper::toDocument)
+                    .collect(java.util.stream.Collectors.toList());
+
+            int count = searchService.bulkIndexTables(documents);
+            log.info("全量同步完成，共同步 {} 条记录", count);
+            return count;
+        } catch (Exception e) {
+            log.error("全量同步失败: {}", e.getMessage(), e);
+            throw new RuntimeException("全量同步失败: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * 记录变更历史
      * 

@@ -4,6 +4,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -52,12 +55,16 @@ public class ElasticsearchConfig {
 
     /**
      * 创建 Elasticsearch 高级 Java 客户端
+     * 注册 JavaTimeModule 以支持 LocalDateTime 序列化
      */
     @Bean
     public ElasticsearchClient elasticsearchClient() {
         log.info("初始化 Elasticsearch Java 客户端");
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         ElasticsearchTransport transport = new RestClientTransport(
-                restClient(), new JacksonJsonpMapper());
+                restClient(), new JacksonJsonpMapper(mapper));
         return new ElasticsearchClient(transport);
     }
 

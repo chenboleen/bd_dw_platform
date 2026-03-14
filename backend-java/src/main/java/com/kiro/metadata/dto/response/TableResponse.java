@@ -78,4 +78,29 @@ public class TableResponse {
      * 所有者ID
      */
     private Long ownerId;
+
+    /**
+     * 所有者用户名
+     */
+    private String ownerName;
+
+    /**
+     * 所属数据域ID
+     */
+    private Long catalogId;
+
+    /**
+     * 所属数据域名称
+     */
+    private String catalogName;
+
+    /**
+     * 所属数据域路径
+     */
+    private String catalogPath;
+
+    /**
+     * 所属数据域层级
+     */
+    private Integer catalogLevel;
 }

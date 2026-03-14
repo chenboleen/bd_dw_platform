@@ -108,6 +108,11 @@ public class SecurityConfig {
                     "/actuator/info"
                 ).permitAll()
 
+                // 公开端点 - Elasticsearch同步
+                .requestMatchers(
+                    "/api/v1/search/sync"
+                ).permitAll()
+
                 // 公开端点 - 静态资源
                 .requestMatchers(
                     "/static/**",

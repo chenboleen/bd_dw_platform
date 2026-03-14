@@ -47,3 +47,11 @@ export const deleteColumn = (id: number) =>
 /** 字段排序 */
 export const reorderColumns = (data: ReorderColumnsRequest) =>
   apiClient.put('/columns/reorder', data)
+
+/** 获取扁平化数据域列表（用于下拉选择） */
+export const getCatalogFlat = () =>
+  apiClient.get('/catalogs/flat')
+
+/** 将表关联到数据域 */
+export const addTableToCatalog = (catalogId: number, tableId: number) =>
+  apiClient.post(`/catalogs/${catalogId}/tables/${tableId}`)

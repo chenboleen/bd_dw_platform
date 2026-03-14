@@ -265,15 +265,74 @@ function formatDate(date: string) {
   return dayjs(date).format('YYYY-MM-DD HH:mm:ss')
 }
 
+/**
+ * 截断显示，对 Lombok toString 格式提取关键字段（name/tableName/columnName）
+ */
 function truncate(str: string, len: number) {
   if (!str) return ''
+  // 尝试从 Lombok toString 中提取 name 字段作为摘要
+  const nameMatch = str.match(/\bname=([^,)]+)/)
+  const tableMatch = str.match(/\btableName=([^,)]+)/)
+  const colMatch = str.match(/\bcolumnName=([^,)]+)/)
+  const summary = nameMatch?.[1] || tableMatch?.[1] || colMatch?.[1]
+  if (summary && summary !== 'null') {
+    return summary.length > len ? summary.substring(0, len) + '...' : summary
+  }
   return str.length > len ? str.substring(0, len) + '...' : str
 }
 
+/**
+ * 解析 Lombok toString 格式：ClassName(field1=value1, field2=value2, ...)
+ * 返回格式化后的可读字符串
+ */
+function parseLombokToString(str: string): string | null {
+  // 匹配 ClassName(key=value, ...) 格式
+  const match = str.match(/^(\w+)\((.+)\)$/)
+  if (!match) return null
+  const className = match[1]
+  const body = match[2]
+
+  // 简单分割：按 ", " 分割，但要处理嵌套括号
+  const fields: string[] = []
+  let depth = 0
+  let current = ''
+  for (const ch of body) {
+    if (ch === '(' || ch === '[') depth++
+    else if (ch === ')' || ch === ']') depth--
+    if (ch === ',' && depth === 0) {
+      fields.push(current.trim())
+      current = ''
+    } else {
+      current += ch
+    }
+  }
+  if (current.trim()) fields.push(current.trim())
+
+  // 过滤掉 null 值字段，只保留有意义的字段
+  const meaningful = fields
+    .map(f => {
+      const eqIdx = f.indexOf('=')
+      if (eqIdx === -1) return null
+      const key = f.substring(0, eqIdx).trim()
+      const val = f.substring(eqIdx + 1).trim()
+      if (val === 'null' || val === '') return null
+      return `  ${key}: ${val}`
+    })
+    .filter(Boolean)
+
+  if (meaningful.length === 0) return null
+  return `[${className}]\n${meaningful.join('\n')}`
+}
+
 function formatJson(str: string) {
+  if (!str) return str
+  // 尝试 JSON 格式
   try {
     return JSON.stringify(JSON.parse(str), null, 2)
   } catch {
+    // 尝试 Lombok toString 格式
+    const parsed = parseLombokToString(str)
+    if (parsed) return parsed
     return str
   }
 }

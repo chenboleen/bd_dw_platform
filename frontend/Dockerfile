@@ -5,7 +5,7 @@
 # ==========================================
 
 # 阶段1: 构建阶段
-FROM node:18-alpine AS builder
+FROM docker.io/library/node:18-alpine AS builder
 
 LABEL description="数据仓库元数据管理系统 - 前端构建阶段"
 
@@ -21,7 +21,7 @@ RUN npm run build
 
 # ==========================================
 # 阶段2: Nginx 运行阶段
-FROM nginx:1.25-alpine AS runtime
+FROM docker.io/library/nginx:1.25-alpine AS runtime
 
 LABEL maintainer="Kiro Team"
 LABEL description="数据仓库元数据管理系统 - 前端运行镜像"

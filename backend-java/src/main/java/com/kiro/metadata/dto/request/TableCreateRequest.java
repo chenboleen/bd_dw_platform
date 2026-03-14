@@ -56,8 +56,7 @@ public class TableCreateRequest {
     private Long dataSizeBytes;
     
     /**
-     * 所有者ID
+     * 所有者ID（可选，默认为当前登录用户）
      */
-    @NotNull(message = "所有者ID不能为空")
     private Long ownerId;
 }

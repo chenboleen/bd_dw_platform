@@ -48,6 +48,10 @@
             <el-icon><Upload /></el-icon>
             <template #title>导入导出</template>
           </el-menu-item>
+          <el-menu-item v-if="authStore.isAdmin" index="/users">
+            <el-icon><User /></el-icon>
+            <template #title>用户管理</template>
+          </el-menu-item>
         </el-menu>
       </nav>
 
@@ -146,6 +150,7 @@ const activeMenu = computed(() => {
   if (path.startsWith('/quality')) return '/quality'
   if (path.startsWith('/history')) return '/history'
   if (path.startsWith('/import-export')) return '/import-export'
+  if (path.startsWith('/users')) return '/users'
   return path
 })
 

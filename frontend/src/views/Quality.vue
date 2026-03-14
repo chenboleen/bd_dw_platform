@@ -193,7 +193,7 @@ async function searchTables(query: string) {
   searchLoading.value = true
   try {
     const res = await tableApi.listTables({ tableName: query }, { page: 1, pageSize: 20 })
-    tableOptions.value = res.data.items
+    tableOptions.value = res.data?.data?.items ?? res.data?.items ?? []
   } finally {
     searchLoading.value = false
   }
@@ -218,7 +218,7 @@ async function loadTrend() {
   trendLoading.value = true
   try {
     const res = await qualityApi.getQualityTrend(selectedTableId.value, trendDays.value)
-    trendData.value = res.data?.data || res.data || []
+    trendData.value = res.data?.data ?? []
     await nextTick()
     renderCharts()
   } finally {

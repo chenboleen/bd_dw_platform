@@ -311,7 +311,7 @@ async function searchTablesForAdd(query: string) {
   tableSearchLoading.value = true
   try {
     const res = await tableApi.listTables({ tableName: query }, { page: 1, pageSize: 20 })
-    tableSearchResults.value = res.data.items
+    tableSearchResults.value = res.data?.data?.items ?? res.data?.items ?? []
   } finally {
     tableSearchLoading.value = false
   }

@@ -1,56 +1,34 @@
 package com.kiro.metadata.dto.request;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * 目录创建请求 DTO
- * 
+ * level、path 由后端根据 parentId 自动计算，createdBy 从登录用户获取
+ *
  * @author Kiro
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CatalogCreateRequest {
-    
+
     /**
      * 目录名称
      */
     @NotBlank(message = "目录名称不能为空")
     private String name;
-    
+
     /**
      * 目录描述
      */
     private String description;
-    
+
     /**
-     * 父目录ID
+     * 父目录ID（为空则创建根目录）
      */
     private Long parentId;
-    
-    /**
-     * 层级(1-5)
-     */
-    @NotNull(message = "层级不能为空")
-    @Min(value = 1, message = "层级必须在1-5之间")
-    @Max(value = 5, message = "层级必须在1-5之间")
-    private Integer level;
-    
-    /**
-     * 路径
-     */
-    @NotBlank(message = "路径不能为空")
-    private String path;
-    
-    /**
-     * 创建人ID
-     */
-    @NotNull(message = "创建人ID不能为空")
-    private Long createdBy;
 }

@@ -9,6 +9,7 @@ import co.elastic.clients.elasticsearch._types.mapping.BooleanProperty;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import co.elastic.clients.elasticsearch.indices.IndexSettings;
+import com.kiro.metadata.service.MetadataService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +30,7 @@ import java.util.Map;
 public class ElasticsearchIndexConfig {
 
     private final ElasticsearchClient elasticsearchClient;
+    private final MetadataService metadataService;
 
     @Value("${elasticsearch.index.name}")
     private String indexName;
@@ -54,24 +56,29 @@ public class ElasticsearchIndexConfig {
 
             if (exists) {
                 log.info("索引 {} 已存在，跳过创建", indexName);
-                return;
+            } else {
+                // 创建索引映射
+                Map<String, Property> properties = createIndexMapping();
+
+                // 创建索引
+                elasticsearchClient.indices().create(CreateIndexRequest.of(c -> c
+                        .index(indexName)
+                        .settings(IndexSettings.of(s -> s
+                                .numberOfShards(String.valueOf(numberOfShards))
+                                .numberOfReplicas(String.valueOf(numberOfReplicas))
+                                .refreshInterval(t -> t.time("1s"))
+                        ))
+                        .mappings(m -> m.properties(properties))
+                ));
+
+                log.info("成功创建 Elasticsearch 索引: {}", indexName);
             }
 
-            // 创建索引映射
-            Map<String, Property> properties = createIndexMapping();
+            // 全量同步数据到 Elasticsearch
+            log.info("开始全量同步数据到 Elasticsearch");
+            int syncedCount = metadataService.syncAllToElasticsearch();
+            log.info("全量同步完成，共同步 {} 条记录", syncedCount);
 
-            // 创建索引
-            elasticsearchClient.indices().create(CreateIndexRequest.of(c -> c
-                    .index(indexName)
-                    .settings(IndexSettings.of(s -> s
-                            .numberOfShards(String.valueOf(numberOfShards))
-                            .numberOfReplicas(String.valueOf(numberOfReplicas))
-                            .refreshInterval(t -> t.time("1s"))
-                    ))
-                    .mappings(m -> m.properties(properties))
-            ));
-
-            log.info("成功创建 Elasticsearch 索引: {}", indexName);
         } catch (Exception e) {
             log.error("初始化 Elasticsearch 索引失败: {}", e.getMessage(), e);
             // 不抛出异常，避免影响应用启动

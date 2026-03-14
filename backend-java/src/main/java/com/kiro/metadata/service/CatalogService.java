@@ -43,44 +43,35 @@ public class CatalogService {
     @Transactional(rollbackFor = Exception.class)
     public Catalog createCatalog(Catalog catalog) {
         log.info("创建目录节点: {}", catalog.getName());
-        
-        // 验证层级限制
-        if (catalog.getLevel() < 1 || catalog.getLevel() > 5) {
-            throw new IllegalArgumentException("目录层级必须在1-5之间");
-        }
-        
-        // 验证父目录存在(如果不是根目录)
+
+        // 验证父目录存在并自动计算 level 和 path
         if (catalog.getParentId() != null) {
             Catalog parent = catalogRepository.selectById(catalog.getParentId());
             if (parent == null) {
                 throw new IllegalArgumentException("父目录不存在, ID: " + catalog.getParentId());
             }
-            
-            // 验证层级一致性
-            if (catalog.getLevel() != parent.getLevel() + 1) {
-                throw new IllegalArgumentException(
-                    String.format("层级不一致: 父目录层级为%d, 当前层级应为%d", 
-                        parent.getLevel(), parent.getLevel() + 1)
-                );
+
+            int newLevel = parent.getLevel() + 1;
+            if (newLevel > 5) {
+                throw new IllegalArgumentException("目录层级超过限制（最多5层）");
             }
-            
-            // 构建路径
+
+            // 自动计算层级和路径
+            catalog.setLevel(newLevel);
             catalog.setPath(parent.getPath() + "/" + catalog.getName());
         } else {
             // 根目录
-            if (catalog.getLevel() != 1) {
-                throw new IllegalArgumentException("根目录层级必须为1");
-            }
+            catalog.setLevel(1);
             catalog.setPath("/" + catalog.getName());
         }
-        
+
         // 保存目录
         catalogRepository.insert(catalog);
-        
+
         // 记录变更历史
-        recordChange(catalog.getId(), OperationType.CREATE, null, 
+        recordChange(catalog.getId(), OperationType.CREATE, null,
                     null, catalog.toString(), catalog.getCreatedBy());
-        
+
         log.info("目录节点创建成功, ID: {}", catalog.getId());
         return catalog;
     }
@@ -263,6 +254,17 @@ public class CatalogService {
         return catalogRepository.getTablesInCatalog(catalogId);
     }
     
+    /**
+     * 获取所有目录节点（扁平列表，用于下拉选择）
+     *
+     * @return 所有目录列表
+     */
+    public List<Catalog> getAllCatalogs() {
+        QueryWrapper<Catalog> queryWrapper = new QueryWrapper<>();
+        queryWrapper.orderByAsc("level", "name");
+        return catalogRepository.selectList(queryWrapper);
+    }
+
     /**
      * 记录变更历史
      */

@@ -6,8 +6,12 @@ import com.kiro.metadata.dto.request.TableUpdateRequest;
 import com.kiro.metadata.dto.response.ColumnResponse;
 import com.kiro.metadata.dto.response.PagedResponse;
 import com.kiro.metadata.dto.response.TableResponse;
+import com.kiro.metadata.entity.Catalog;
 import com.kiro.metadata.entity.ColumnMetadata;
 import com.kiro.metadata.entity.TableMetadata;
+import com.kiro.metadata.entity.User;
+import com.kiro.metadata.repository.CatalogRepository;
+import com.kiro.metadata.repository.UserRepository;
 import com.kiro.metadata.service.ColumnService;
 import com.kiro.metadata.service.MetadataService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,6 +54,8 @@ public class TableController {
 
     private final MetadataService metadataService;
     private final ColumnService columnService;
+    private final UserRepository userRepository;
+    private final CatalogRepository catalogRepository;
 
     /**
      * 创建表元数据
@@ -97,7 +103,8 @@ public class TableController {
      *
      * @param databaseName 数据库名过滤（可选）
      * @param tableType    表类型过滤（可选）
-     * @param tableName    表名模糊查询（可选）
+     * @param keyword      关键词模糊查询（表名/描述/所有者，可选）
+     * @param catalogId    数据域ID过滤（可选）
      * @param ownerId      所有者ID过滤（可选）
      * @param page         页码（默认1）
      * @param pageSize     每页大小（默认20）
@@ -108,7 +115,7 @@ public class TableController {
     @GetMapping
     @Operation(
         summary = "查询表列表",
-        description = "分页查询表元数据列表，支持按数据库名、表类型、表名、所有者过滤",
+        description = "分页查询表元数据列表，支持按数据库名、表类型、关键词、数据域过滤",
         security = @SecurityRequirement(name = "Bearer认证")
     )
     @ApiResponses({
@@ -124,8 +131,10 @@ public class TableController {
             @RequestParam(required = false) String databaseName,
             @Parameter(description = "表类型过滤（TABLE/VIEW/EXTERNAL）")
             @RequestParam(required = false) String tableType,
-            @Parameter(description = "表名模糊查询")
-            @RequestParam(required = false) String tableName,
+            @Parameter(description = "关键词模糊查询（表名/描述）")
+            @RequestParam(required = false) String keyword,
+            @Parameter(description = "数据域ID过滤")
+            @RequestParam(required = false) Long catalogId,
             @Parameter(description = "所有者ID过滤")
             @RequestParam(required = false) Long ownerId,
             @Parameter(description = "页码，从1开始")
@@ -147,8 +156,11 @@ public class TableController {
         if (tableType != null && !tableType.isBlank()) {
             filters.put("tableType", tableType);
         }
-        if (tableName != null && !tableName.isBlank()) {
-            filters.put("tableName", tableName);
+        if (keyword != null && !keyword.isBlank()) {
+            filters.put("keyword", keyword);
+        }
+        if (catalogId != null) {
+            filters.put("catalogId", catalogId);
         }
         if (ownerId != null) {
             filters.put("ownerId", ownerId);
@@ -210,6 +222,7 @@ public class TableController {
 
     /**
      * 更新表元数据
+     * 仅表所有者或 ADMIN 可操作
      *
      * @param id      表ID
      * @param request 更新请求
@@ -219,7 +232,7 @@ public class TableController {
     @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
     @Operation(
         summary = "更新表元数据",
-        description = "更新表的描述、存储格式等信息，需要 DEVELOPER 或 ADMIN 角色",
+        description = "更新表的描述、存储格式等信息，需要 DEVELOPER 或 ADMIN 角色，且只有表所有者或 ADMIN 可操作",
         security = @SecurityRequirement(name = "Bearer认证")
     )
     @ApiResponses({
@@ -239,6 +252,15 @@ public class TableController {
             @Valid @RequestBody TableUpdateRequest request) {
         log.info("更新表元数据请求, ID: {}", id);
 
+        // 校验：只有表所有者或 ADMIN 可编辑
+        Long currentUserId = getCurrentUserId();
+        TableMetadata existing = metadataService.getTableById(id);
+        boolean isAdmin = isCurrentUserAdmin();
+        if (!isAdmin && !currentUserId.equals(existing.getOwnerId())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                .body(buildSuccessResponse("无权限：只有表所有者或管理员可以编辑此表", null));
+        }
+
         // 将请求 DTO 转换为实体（仅包含可更新字段）
         TableMetadata updates = new TableMetadata();
         updates.setDescription(request.getDescription());
@@ -256,21 +278,22 @@ public class TableController {
 
     /**
      * 删除表元数据
+     * 仅表所有者或 ADMIN 可操作
      *
      * @param id 表ID
      * @return 204 No Content
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('DEVELOPER', 'ADMIN')")
     @Operation(
         summary = "删除表元数据",
-        description = "删除指定表的元数据记录，需要 ADMIN 角色",
+        description = "删除指定表的元数据记录，只有表所有者或 ADMIN 可操作",
         security = @SecurityRequirement(name = "Bearer认证")
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "删除成功"),
         @ApiResponse(responseCode = "401", description = "未认证"),
-        @ApiResponse(responseCode = "403", description = "权限不足，需要 ADMIN 角色"),
+        @ApiResponse(responseCode = "403", description = "权限不足"),
         @ApiResponse(responseCode = "404", description = "表不存在")
     })
     public ResponseEntity<Void> deleteTable(
@@ -278,11 +301,16 @@ public class TableController {
             @PathVariable Long id) {
         log.info("删除表元数据请求, ID: {}", id);
 
-        // 获取当前用户ID
-        Long userId = getCurrentUserId();
+        // 校验：只有表所有者或 ADMIN 可删除
+        Long currentUserId = getCurrentUserId();
+        TableMetadata existing = metadataService.getTableById(id);
+        boolean isAdmin = isCurrentUserAdmin();
+        if (!isAdmin && !currentUserId.equals(existing.getOwnerId())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        }
 
         // 调用服务删除
-        metadataService.deleteTable(id, userId);
+        metadataService.deleteTable(id, currentUserId);
 
         log.info("表元数据删除成功, ID: {}", id);
         return ResponseEntity.noContent().build();
@@ -345,7 +373,7 @@ public class TableController {
         table.setStorageFormat(request.getStorageFormat());
         table.setStorageLocation(request.getStorageLocation());
         table.setDataSizeBytes(request.getDataSizeBytes());
-        table.setOwnerId(request.getOwnerId());
+        table.setOwnerId(request.getOwnerId() != null ? request.getOwnerId() : getCurrentUserId());
         return table;
     }
 
@@ -356,6 +384,36 @@ public class TableController {
      * @return 表响应 DTO
      */
     private TableResponse convertToResponse(TableMetadata table) {
+        // 查询所有者用户名
+        String ownerName = null;
+        if (table.getOwnerId() != null) {
+            try {
+                User owner = userRepository.selectById(table.getOwnerId());
+                if (owner != null) {
+                    ownerName = owner.getUsername();
+                }
+            } catch (Exception e) {
+                log.warn("查询所有者信息失败, ownerId: {}", table.getOwnerId());
+            }
+        }
+
+        // 查询关联数据域
+        Long catalogId = null;
+        String catalogName = null;
+        String catalogPath = null;
+        Integer catalogLevel = null;
+        try {
+            Catalog catalog = catalogRepository.findCatalogByTableId(table.getId());
+            if (catalog != null) {
+                catalogId = catalog.getId();
+                catalogName = catalog.getName();
+                catalogPath = catalog.getPath();
+                catalogLevel = catalog.getLevel();
+            }
+        } catch (Exception e) {
+            log.warn("查询表关联数据域失败, tableId: {}", table.getId());
+        }
+
         return TableResponse.builder()
             .id(table.getId())
             .databaseName(table.getDatabaseName())
@@ -369,6 +427,11 @@ public class TableController {
             .updatedAt(table.getUpdatedAt())
             .lastAccessedAt(table.getLastAccessedAt())
             .ownerId(table.getOwnerId())
+            .ownerName(ownerName)
+            .catalogId(catalogId)
+            .catalogName(catalogName)
+            .catalogPath(catalogPath)
+            .catalogLevel(catalogLevel)
             .build();
     }
 
@@ -406,21 +469,37 @@ public class TableController {
 
     /**
      * 获取当前登录用户ID
-     * 从 Spring Security 上下文中提取用户ID
+     * 通过 Spring Security 上下文中的用户名查询数据库获取 ID
      *
-     * @return 当前用户ID，未登录时返回 -1L
+     * @return 当前用户ID，未登录时返回 1L
      */
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
-            // 尝试从 principal 中获取用户ID
             Object principal = authentication.getPrincipal();
             if (principal instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
-                // 通过用户名查找用户ID（实际项目中可扩展为从 JWT claims 中获取）
-                log.debug("当前用户: {}", userDetails.getUsername());
+                try {
+                    User user = userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+                    if (user != null) {
+                        return user.getId();
+                    }
+                } catch (Exception e) {
+                    log.warn("通过用户名查询用户ID失败: {}", userDetails.getUsername());
+                }
             }
         }
-        // 默认返回系统用户ID（实际项目中应从 JWT token 中解析）
         return 1L;
+    }
+
+    /**
+     * 判断当前登录用户是否为 ADMIN
+     *
+     * @return 是否为管理员
+     */
+    private boolean isCurrentUserAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) return false;
+        return authentication.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

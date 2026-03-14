@@ -13,6 +13,7 @@ const Catalog = () => import('@/views/Catalog.vue')
 const Quality = () => import('@/views/Quality.vue')
 const History = () => import('@/views/History.vue')
 const ImportExport = () => import('@/views/ImportExport.vue')
+const UserManagement = () => import('@/views/UserManagement.vue')
 
 const router = createRouter({
   history: createWebHistory(),
@@ -76,6 +77,12 @@ const router = createRouter({
           name: 'ImportExport',
           component: ImportExport,
           meta: { title: '导入导出', requiresAuth: true }
+        },
+        {
+          path: 'users',
+          name: 'UserManagement',
+          component: UserManagement,
+          meta: { title: '用户管理', requiresAuth: true, requiresAdmin: true }
         }
       ]
     },
@@ -118,6 +125,12 @@ router.beforeEach(async (to, from, next) => {
       next({ path: '/login' })
       return
     }
+  }
+
+  // 需要管理员权限的页面
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    next('/')
+    return
   }
 
   next()

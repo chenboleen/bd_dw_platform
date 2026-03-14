@@ -1,6 +1,7 @@
 package com.kiro.metadata.controller;
 
 import com.kiro.metadata.dto.request.FilterRequest;
+import com.kiro.metadata.service.MetadataService;
 import com.kiro.metadata.service.SearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +36,7 @@ import java.util.Map;
 public class SearchController {
 
     private final SearchService searchService;
+    private final MetadataService metadataService;
 
     /**
      * 全文搜索
@@ -202,6 +204,36 @@ public class SearchController {
         response.put("data", result);
 
         log.info("高级过滤完成, 总数: {}", result.get("total"));
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 全量同步 MySQL 数据到 Elasticsearch
+     * 用于初始化或数据不一致时的手动同步
+     *
+     * @return 同步结果
+     */
+    @PostMapping("/sync")
+    @Operation(
+        summary = "全量同步数据到 Elasticsearch",
+        description = "将 MySQL 中所有表元数据批量同步到 Elasticsearch 索引，用于初始化或修复数据不一致",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "同步成功"),
+        @ApiResponse(responseCode = "401", description = "未认证"),
+        @ApiResponse(responseCode = "500", description = "同步失败")
+    })
+    public ResponseEntity<Map<String, Object>> syncToElasticsearch() {
+        log.info("手动触发全量同步到 Elasticsearch");
+        int count = metadataService.syncAllToElasticsearch();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "同步完成");
+        response.put("data", Map.of("syncedCount", count));
+
+        log.info("全量同步完成，共同步 {} 条记录", count);
         return ResponseEntity.ok(response);
     }
 

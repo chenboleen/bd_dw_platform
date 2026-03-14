@@ -86,4 +86,15 @@ public interface CatalogRepository extends BaseMapper<Catalog> {
             "INNER JOIN table_catalog tc ON t.id = tc.table_id " +
             "WHERE tc.catalog_id = #{catalogId}")
     List<TableMetadata> getTablesInCatalog(@Param("catalogId") Long catalogId);
+
+    /**
+     * 根据表ID查询关联的数据域（取第一个）
+     * 
+     * @param tableId 表ID
+     * @return 数据域
+     */
+    @Select("SELECT c.* FROM catalog c " +
+            "INNER JOIN table_catalog tc ON c.id = tc.catalog_id " +
+            "WHERE tc.table_id = #{tableId} LIMIT 1")
+    Catalog findCatalogByTableId(@Param("tableId") Long tableId);
 }

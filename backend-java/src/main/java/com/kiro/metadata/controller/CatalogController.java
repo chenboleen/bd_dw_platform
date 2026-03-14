@@ -71,7 +71,7 @@ public class CatalogController {
     })
     public ResponseEntity<Map<String, Object>> createCatalog(
             @Valid @RequestBody CatalogCreateRequest request) {
-        log.info("创建目录节点请求: {}, 层级: {}", request.getName(), request.getLevel());
+        log.info("创建目录节点请求: {}, 父目录ID: {}", request.getName(), request.getParentId());
 
         // 将请求 DTO 转换为实体
         Catalog catalog = convertToEntity(request);
@@ -113,6 +113,31 @@ public class CatalogController {
 
         log.info("目录树获取成功, 根节点数: {}", tree.size());
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 获取扁平化目录列表（用于下拉选择）
+     *
+     * @return 所有目录节点列表（不含树形结构）
+     */
+    @GetMapping("/flat")
+    @Operation(
+        summary = "获取扁平化目录列表",
+        description = "获取所有目录节点的扁平列表，用于下拉选择",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    public ResponseEntity<Map<String, Object>> getCatalogFlat() {
+        log.debug("获取扁平化目录列表");
+        List<Catalog> catalogs = catalogService.getAllCatalogs();
+        List<Map<String, Object>> result = catalogs.stream().map(c -> {
+            Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", c.getId());
+            item.put("name", c.getName());
+            item.put("path", c.getPath());
+            item.put("level", c.getLevel());
+            return item;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(buildSuccessResponse("获取目录列表成功", result));
     }
 
     /**
@@ -261,15 +286,19 @@ public class CatalogController {
 
     /**
      * 将创建请求 DTO 转换为实体
+     * level、path 由 CatalogService 根据 parentId 自动计算
+     * createdBy 从当前登录用户获取
      */
     private Catalog convertToEntity(CatalogCreateRequest request) {
         Catalog catalog = new Catalog();
         catalog.setName(request.getName());
         catalog.setDescription(request.getDescription());
         catalog.setParentId(request.getParentId());
-        catalog.setLevel(request.getLevel());
-        catalog.setPath(request.getPath());
-        catalog.setCreatedBy(request.getCreatedBy());
+        // level 和 path 由 CatalogService.createCatalog 自动计算
+        // 先设置默认值，service 层会覆盖
+        catalog.setLevel(request.getParentId() == null ? 1 : 0);
+        catalog.setPath("");
+        catalog.setCreatedBy(getCurrentUserId());
         return catalog;
     }
 

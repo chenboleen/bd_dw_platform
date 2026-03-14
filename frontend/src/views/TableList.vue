@@ -106,6 +106,19 @@
           </template>
         </el-table-column>
 
+        <el-table-column prop="ownerName" label="所有者" width="110">
+          <template #default="{ row }">
+            <span class="text-secondary">{{ row.ownerName || '-' }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="catalogName" label="数据域" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag v-if="row.catalogName" size="small" type="info">{{ row.catalogName }}</el-tag>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="dataSizeBytes" label="数据大小" width="120">
           <template #default="{ row }">
             <span class="font-mono text-secondary">{{ formatSize(row.dataSizeBytes) }}</span>
