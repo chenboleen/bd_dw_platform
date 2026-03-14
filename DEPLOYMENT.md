@@ -88,6 +88,16 @@ docker-compose exec backend sh
 docker-compose exec mysql mysql -u root -p
 ```
 
+## 容器名称说明
+
+| 服务 | 容器名 |
+|------|--------|
+| MySQL | bd-dw-mysql |
+| Redis | bd-dw-redis |
+| Elasticsearch | bd-dw-elasticsearch |
+| 后端 | bd-dw-backend |
+| 前端 | bd-dw-frontend |
+
 ## 数据备份
 
 ### MySQL 备份
@@ -107,7 +117,7 @@ docker-compose exec -T mysql mysql -u root -p${MYSQL_ROOT_PASSWORD} metadata_db 
 docker-compose exec redis redis-cli BGSAVE
 
 # 复制 RDB 文件
-docker cp metadata-redis:/data/dump.rdb ./redis_backup_$(date +%Y%m%d).rdb
+docker cp bd-dw-redis:/data/dump.rdb ./redis_backup_$(date +%Y%m%d).rdb
 ```
 
 ### Elasticsearch 备份
@@ -132,7 +142,7 @@ curl -X PUT "localhost:9200/_snapshot/backup_repo/snapshot_$(date +%Y%m%d)"
 
 ```bash
 # 查看详细日志
-docker-compose logs backend
+docker-compose logs bd-dw-backend
 
 # 常见原因：
 # 1. 数据库未就绪 → 等待 MySQL 健康检查通过

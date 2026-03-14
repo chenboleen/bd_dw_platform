@@ -1,14 +1,19 @@
 # Elasticsearch 快速启动指南
 
+## 说明
+
+bd_dw_platform 使用 `co.elastic.clients:elasticsearch-java:8.11.0` 原生 Java 客户端与 Elasticsearch 交互，
+不依赖 Spring Data Elasticsearch，避免了 Spring Boot 3.2.x 的兼容性问题。
+
 ## 使用 Docker Compose 启动
 
-### 1. 启动 Elasticsearch
-
-在项目根目录执行：
+### 1. 启动所有服务（包含 Elasticsearch）
 
 ```bash
-docker-compose -f docker-compose-elasticsearch.yml up -d
+docker-compose up -d
 ```
+
+Elasticsearch 容器名：`bd-dw-elasticsearch`
 
 ### 2. 验证 Elasticsearch 是否启动成功
 
@@ -34,16 +39,16 @@ curl http://localhost:9200
 curl http://localhost:9200/_cluster/health?pretty
 ```
 
-### 4. 停止 Elasticsearch
+### 4. 停止服务
 
 ```bash
-docker-compose -f docker-compose-elasticsearch.yml down
+docker-compose down
 ```
 
 ### 5. 停止并删除数据卷
 
 ```bash
-docker-compose -f docker-compose-elasticsearch.yml down -v
+docker-compose down -v
 ```
 
 ## 手动启动 Elasticsearch
@@ -80,13 +85,16 @@ elasticsearch:
 ## 常见问题
 
 ### 1. 端口被占用
-如果 9200 端口被占用，修改 `docker-compose-elasticsearch.yml` 中的端口映射。
+修改 `docker-compose.yml` 中 `ES_PORT` 或 `.env` 文件中的端口配置。
 
 ### 2. 内存不足
-调整 `ES_JAVA_OPTS` 中的堆内存大小：
+调整 `docker-compose.yml` 中的 `ES_JAVA_OPTS`：
 ```yaml
 ES_JAVA_OPTS: "-Xms256m -Xmx256m"
 ```
 
 ### 3. 索引未自动创建
-检查应用日志，确认 `ElasticsearchIndexConfig` 是否执行成功。
+检查应用日志，确认 `ElasticsearchIndexConfig` 是否执行成功：
+```bash
+docker-compose logs bd-dw-backend | grep -i elasticsearch
+```

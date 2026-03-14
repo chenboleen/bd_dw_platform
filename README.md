@@ -1,4 +1,4 @@
-# 数据仓库元数据管理系统
+# bd_dw_platform
 
 企业级数据仓库元数据管理平台，提供表元数据管理、血缘关系追踪、全文搜索、数据质量监控等核心功能。
 
@@ -7,10 +7,10 @@
 | 层次 | 技术 |
 |------|------|
 | 后端框架 | Java 17 + Spring Boot 3.2 |
-| ORM | MyBatis-Plus 3.5 + JPA |
+| ORM | MyBatis-Plus 3.5.7 |
 | 认证 | Spring Security 6 + JWT |
 | 缓存 | Redis 7.x |
-| 搜索 | Elasticsearch 8.x |
+| 搜索 | Elasticsearch 8.x（co.elastic.clients 原生客户端） |
 | 数据库 | MySQL 8.0 |
 | 前端框架 | Vue.js 3 + TypeScript |
 | UI 组件库 | Element Plus |
