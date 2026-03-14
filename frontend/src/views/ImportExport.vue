@@ -313,7 +313,9 @@ async function loadExportTasks() {
   tasksLoading.value = true
   try {
     const res = await importExportApi.listExportTasks()
-    exportTasks.value = res.data.items || res.data
+    exportTasks.value = res.data?.data?.items || []
+  } catch {
+    exportTasks.value = []
   } finally {
     tasksLoading.value = false
   }

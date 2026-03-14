@@ -4,10 +4,10 @@
 
 /** 分页响应 */
 export interface PagedResponse<T> {
-  items: T[]
+  data: T[]
   total: number
   page: number
-  pageSize: number
+  size: number
   totalPages: number
 }
 
@@ -172,17 +172,19 @@ export interface LineageCreateRequest {
 
 /** 血缘图节点 */
 export interface LineageNode {
-  id: string
+  id: number
   name: string
   depth: number
-  type: string
+  type?: string
   databaseName?: string
+  tableName?: string
+  tableType?: string
 }
 
 /** 血缘图边 */
 export interface LineageEdge {
-  source: string
-  target: string
+  source: number
+  target: number
   type: string
 }
 

@@ -361,7 +361,7 @@ function renderChart() {
   const { nodes, edges } = graphData.value
 
   // 找到中心节点
-  const centerNodeId = String(selectedTableId.value)
+  const centerNodeId = selectedTableId.value
 
   const option: echarts.EChartsOption = {
     tooltip: {
@@ -387,14 +387,15 @@ function renderChart() {
         type: 'graph',
         layout: 'force',
         data: nodes.map(node => ({
-          id: node.id,
+          id: String(node.id),
           name: node.name,
           databaseName: node.databaseName,
           depth: node.depth,
           symbolSize: node.id === centerNodeId ? 50 : 35,
           itemStyle: {
             color: node.id === centerNodeId ? '#F59E0B' :
-                   node.depth < 0 ? '#3B82F6' : '#10B981',
+                   node.depth === 0 ? '#F59E0B' :
+                   node.depth > 0 ? '#3B82F6' : '#10B981',
             borderColor: '#fff',
             borderWidth: 2,
             shadowBlur: node.id === centerNodeId ? 10 : 0,
@@ -407,11 +408,11 @@ function renderChart() {
             color: '#1E3A8A',
             fontFamily: "'Fira Code', monospace"
           },
-          category: node.id === centerNodeId ? 0 : node.depth < 0 ? 1 : 2
+          category: node.id === centerNodeId ? 0 : node.depth > 0 ? 2 : 1
         })),
         links: edges.map(edge => ({
-          source: edge.source,
-          target: edge.target,
+          source: String(edge.source),
+          target: String(edge.target),
           lineStyle: {
             color: '#94A3B8',
             width: 1.5,

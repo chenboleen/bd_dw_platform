@@ -134,6 +134,52 @@ public class HistoryController {
     }
 
     /**
+     * 获取所有变更历史（分页）
+     * 查询所有变更记录，支持按实体类型过滤，按时间倒序排列
+     *
+     * @param entityType 可选的实体类型过滤
+     * @param page 页码（默认 1）
+     * @param pageSize 每页大小（默认 20）
+     * @return 分页变更历史记录
+     */
+    @GetMapping
+    @Operation(
+        summary = "获取所有变更历史",
+        description = "查询所有变更记录，支持按实体类型过滤，按时间倒序排列，支持分页",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "查询成功"),
+        @ApiResponse(responseCode = "401", description = "未认证")
+    })
+    public ResponseEntity<Map<String, Object>> getAllHistory(
+            @Parameter(description = "实体类型过滤（TABLE/COLUMN/CATALOG/LINEAGE）", example = "TABLE")
+            @RequestParam(required = false) String entityType,
+            @Parameter(description = "页码，从 1 开始", example = "1")
+            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页大小", example = "20")
+            @RequestParam(defaultValue = "20") int pageSize) {
+        log.info("获取所有变更历史请求, 实体类型: {}, 页码: {}, 每页: {}", entityType, page, pageSize);
+
+        Page<ChangeHistory> historyPage = historyService.getAllHistory(entityType, page, pageSize);
+
+        List<ChangeHistoryResponse> records = historyPage.getRecords().stream()
+            .map(this::convertToResponse)
+            .collect(Collectors.toList());
+
+        Map<String, Object> result = buildPagedResponse(
+            "获取所有变更历史成功",
+            records,
+            historyPage.getTotal(),
+            page,
+            pageSize
+        );
+
+        log.info("所有变更历史获取成功, 总数: {}", historyPage.getTotal());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 获取最近变更记录
      * 查询最近指定小时内的变更记录
      *

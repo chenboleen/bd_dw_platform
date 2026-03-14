@@ -1,5 +1,6 @@
 package com.kiro.metadata.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kiro.metadata.dto.request.ExportRequest;
 import com.kiro.metadata.dto.response.ExportStatusResponse;
 import com.kiro.metadata.entity.ExportTask;
@@ -30,7 +31,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 导入导出 API 控制器
@@ -152,21 +155,33 @@ public class ImportExportController {
     })
     public ResponseEntity<Map<String, Object>> createExportTask(
             @Valid @RequestBody ExportRequest request) {
-        log.info("创建导出任务请求, 类型: {}", request.getExportType());
+        log.info("创建导出任务请求, 类型: {}", request.getFormat());
 
         // 解析导出类型
         ExportType exportType;
         try {
-            exportType = ExportType.valueOf(request.getExportType().toUpperCase());
+            exportType = ExportType.valueOf(request.getFormat().toUpperCase());
         } catch (IllegalArgumentException e) {
-            Map<String, Object> error = buildErrorResponse("不支持的导出类型: " + request.getExportType() + "，支持 CSV 和 JSON");
+            Map<String, Object> error = buildErrorResponse("不支持的导出类型: " + request.getFormat() + "，支持 CSV 和 JSON");
             return ResponseEntity.badRequest().body(error);
+        }
+
+        // 构建过滤条件
+        Map<String, Object> filters = request.getFilters();
+        if (filters == null) {
+            filters = new HashMap<>();
+        }
+        if (request.getDatabaseName() != null && !request.getDatabaseName().isBlank()) {
+            filters.put("databaseName", request.getDatabaseName());
+        }
+        if (request.getTableType() != null && !request.getTableType().isBlank()) {
+            filters.put("tableType", request.getTableType());
         }
 
         Long userId = getCurrentUserId();
         Long taskId = importExportService.createExportTask(
             exportType,
-            request.getFilters(),
+            filters,
             userId
         );
 
@@ -186,6 +201,48 @@ public class ImportExportController {
 
         log.info("导出任务创建成功, 任务ID: {}, 类型: {}", taskId, exportType);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(result);
+    }
+
+    /**
+     * 查询导出任务列表（分页）
+     *
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @return 分页任务列表
+     */
+    @GetMapping("/export/tasks")
+    @Operation(
+        summary = "查询导出任务列表",
+        description = "查询所有导出任务列表，按创建时间倒序排列，支持分页",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "查询成功"),
+        @ApiResponse(responseCode = "401", description = "未认证")
+    })
+    public ResponseEntity<Map<String, Object>> listExportTasks(
+            @Parameter(description = "页码，从 1 开始", example = "1")
+            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页大小", example = "20")
+            @RequestParam(defaultValue = "20") int pageSize) {
+        log.info("查询导出任务列表请求, 页码: {}, 每页: {}", page, pageSize);
+
+        Page<ExportTask> taskPage = importExportService.listExportTasks(page, pageSize);
+
+        List<ExportStatusResponse> tasks = taskPage.getRecords().stream()
+            .map(this::convertToStatusResponse)
+            .collect(Collectors.toList());
+
+        Map<String, Object> result = buildPagedResponse(
+            "查询导出任务列表成功",
+            tasks,
+            taskPage.getTotal(),
+            page,
+            pageSize
+        );
+
+        log.info("导出任务列表查询成功, 总数: {}", taskPage.getTotal());
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -291,6 +348,7 @@ public class ImportExportController {
         return ExportStatusResponse.builder()
             .taskId(task.getId())
             .status(task.getStatus())
+            .format(task.getTaskType())
             .filePath(task.getFilePath())
             .recordCount(task.getRecordCount())
             .errorMessage(task.getErrorMessage())
@@ -332,6 +390,24 @@ public class ImportExportController {
         response.put("success", false);
         response.put("message", message);
         response.put("data", null);
+        return response;
+    }
+
+    /**
+     * 构建分页响应格式
+     */
+    private Map<String, Object> buildPagedResponse(String message, List<?> records,
+                                                    long total, int page, int pageSize) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        response.put("data", Map.of(
+            "items", records,
+            "total", total,
+            "page", page,
+            "pageSize", pageSize,
+            "totalPages", (int) Math.ceil((double) total / pageSize)
+        ));
         return response;
     }
 

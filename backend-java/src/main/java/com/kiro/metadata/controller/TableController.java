@@ -8,7 +8,6 @@ import com.kiro.metadata.dto.response.PagedResponse;
 import com.kiro.metadata.dto.response.TableResponse;
 import com.kiro.metadata.entity.ColumnMetadata;
 import com.kiro.metadata.entity.TableMetadata;
-import com.kiro.metadata.entity.TableType;
 import com.kiro.metadata.service.ColumnService;
 import com.kiro.metadata.service.MetadataService;
 import io.swagger.v3.oas.annotations.Operation;

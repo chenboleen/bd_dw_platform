@@ -65,6 +65,7 @@ public class JwtTokenProvider {
      * @param expiration 过期时间(毫秒)
      * @return JWT Token
      */
+    @SuppressWarnings("deprecation")
     private String generateToken(String username, Long expiration) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);

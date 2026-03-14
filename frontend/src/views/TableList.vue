@@ -256,16 +256,20 @@ const tableFormRules: FormRules = {
 }
 
 // 统计数据
-const stats = computed(() => [
-  { label: '总表数', value: tableStore.total, trend: undefined as number | undefined },
-  { label: '普通表', value: tableStore.tables.filter(t => t.tableType === 'TABLE').length, trend: undefined as number | undefined },
-  { label: '视图', value: tableStore.tables.filter(t => t.tableType === 'VIEW').length, trend: undefined as number | undefined },
-  { label: '外部表', value: tableStore.tables.filter(t => t.tableType === 'EXTERNAL').length, trend: undefined as number | undefined }
-])
+const stats = computed(() => {
+  const safeTables = (tableStore.tables || []) as any[]
+  return [
+    { label: '总表数', value: tableStore.total || 0, trend: undefined as number | undefined },
+    { label: '普通表', value: safeTables.filter((t: any) => t?.tableType === 'TABLE').length, trend: undefined as number | undefined },
+    { label: '视图', value: safeTables.filter((t: any) => t?.tableType === 'VIEW').length, trend: undefined as number | undefined },
+    { label: '外部表', value: safeTables.filter((t: any) => t?.tableType === 'EXTERNAL').length, trend: undefined as number | undefined }
+  ]
+})
 
 // 数据库列表
 const databases = computed(() => {
-  const dbs = new Set(tableStore.tables.map(t => t.databaseName))
+  const safeTables = (tableStore.tables || []) as any[]
+  const dbs = new Set(safeTables.map((t: any) => t?.databaseName).filter(Boolean))
   return Array.from(dbs).sort()
 })
 

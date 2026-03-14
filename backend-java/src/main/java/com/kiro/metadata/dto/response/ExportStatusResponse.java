@@ -1,5 +1,6 @@
 package com.kiro.metadata.dto.response;
 
+import com.kiro.metadata.entity.ExportType;
 import com.kiro.metadata.entity.TaskStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,6 +29,11 @@ public class ExportStatusResponse {
      * 任务状态
      */
     private TaskStatus status;
+    
+    /**
+     * 导出格式
+     */
+    private ExportType format;
     
     /**
      * 文件路径

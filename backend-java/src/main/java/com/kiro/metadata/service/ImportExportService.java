@@ -1,6 +1,7 @@
 package com.kiro.metadata.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiro.metadata.entity.*;
@@ -381,6 +382,23 @@ public class ImportExportService {
         }
         
         return task;
+    }
+
+    /**
+     * 获取所有导出任务列表
+     * 
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @return 分页任务列表
+     */
+    public Page<ExportTask> listExportTasks(int page, int pageSize) {
+        log.info("查询导出任务列表, 页码: {}, 每页: {}", page, pageSize);
+        
+        QueryWrapper<ExportTask> queryWrapper = new QueryWrapper<>();
+        queryWrapper.orderByDesc("created_at");
+        
+        Page<ExportTask> pageParam = new Page<>(page, pageSize);
+        return exportTaskRepository.selectPage(pageParam, queryWrapper);
     }
     
     /**

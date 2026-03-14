@@ -9,8 +9,8 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.indices.CreateIndexResponse;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import com.kiro.metadata.document.TableDocument;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,12 +26,18 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SearchService {
 
     private final ElasticsearchClient elasticsearchClient;
 
-    private static final String INDEX_NAME = "tables";
+    private final String indexName;
+
+    public SearchService(
+            ElasticsearchClient elasticsearchClient,
+            @Value("${elasticsearch.index.name:metadata_tables}") String indexName) {
+        this.elasticsearchClient = elasticsearchClient;
+        this.indexName = indexName;
+    }
 
     /**
      * 创建索引（如不存在则创建）
@@ -39,17 +45,17 @@ public class SearchService {
      * @return 是否成功
      */
     public boolean createIndex() {
-        log.info("创建 Elasticsearch 索引: {}", INDEX_NAME);
+        log.info("创建 Elasticsearch 索引: {}", indexName);
         try {
             // 检查索引是否已存在
             boolean exists = elasticsearchClient.indices()
-                    .exists(ExistsRequest.of(e -> e.index(INDEX_NAME)))
+                    .exists(ExistsRequest.of(e -> e.index(indexName)))
                     .value();
 
             if (!exists) {
                 CreateIndexResponse response = elasticsearchClient.indices()
                         .create(c -> c
-                                .index(INDEX_NAME)
+                                .index(indexName)
                                 .mappings(m -> m
                                         .properties("tableName", p -> p.text(t -> t.analyzer("standard")))
                                         .properties("databaseName", p -> p.keyword(k -> k))
@@ -61,9 +67,9 @@ public class SearchService {
                                         .properties("updatedAt", p -> p.date(d -> d))
                                 )
                         );
-                log.info("索引创建成功: {}, acknowledged={}", INDEX_NAME, response.acknowledged());
+                log.info("索引创建成功: {}, acknowledged={}", indexName, response.acknowledged());
             } else {
-                log.info("索引已存在，跳过创建: {}", INDEX_NAME);
+                log.info("索引已存在，跳过创建: {}", indexName);
             }
             return true;
         } catch (IOException e) {
@@ -82,7 +88,7 @@ public class SearchService {
         log.debug("索引表文档, ID: {}", document.getId());
         try {
             IndexResponse response = elasticsearchClient.index(i -> i
-                    .index(INDEX_NAME)
+                    .index(indexName)
                     .id(document.getId())
                     .document(document)
             );
@@ -109,7 +115,7 @@ public class SearchService {
             List<BulkOperation> operations = documents.stream()
                     .map(doc -> BulkOperation.of(b -> b
                             .index(IndexOperation.of(i -> i
-                                    .index(INDEX_NAME)
+                                    .index(indexName)
                                     .id(doc.getId())
                                     .document(doc)
                             ))
@@ -156,7 +162,7 @@ public class SearchService {
         log.debug("删除表文档索引, ID: {}", tableId);
         try {
             DeleteResponse response = elasticsearchClient.delete(d -> d
-                    .index(INDEX_NAME)
+                    .index(indexName)
                     .id(String.valueOf(tableId))
             );
             log.debug("表文档索引删除成功, ID: {}, result: {}", tableId, response.result());
@@ -197,7 +203,7 @@ public class SearchService {
             applyFilters(boolQuery, filters);
 
             SearchResponse<TableDocument> response = elasticsearchClient.search(s -> s
-                            .index(INDEX_NAME)
+                            .index(indexName)
                             .query(boolQuery.build()._toQuery())
                             .from(page * pageSize)
                             .size(pageSize)
@@ -248,7 +254,7 @@ public class SearchService {
             );
 
             SearchResponse<TableDocument> response = elasticsearchClient.search(s -> s
-                            .index(INDEX_NAME)
+                            .index(indexName)
                             .query(Query.of(q -> q.prefix(prefixQuery)))
                             .size(limit)
                             .source(so -> so.filter(f -> f.includes("tableName", "databaseName"))),
@@ -299,7 +305,7 @@ public class SearchService {
             }
 
             SearchResponse<TableDocument> response = elasticsearchClient.search(s -> s
-                            .index(INDEX_NAME)
+                            .index(indexName)
                             .query(boolQuery.build()._toQuery())
                             .from(page * pageSize)
                             .size(pageSize),

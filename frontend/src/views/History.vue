@@ -206,8 +206,11 @@ async function loadHistory() {
   loading.value = true
   try {
     const res = await historyApi.getAllHistory(currentPage.value, pageSize.value, filterEntityType.value || undefined)
-    historyList.value = res.data.items
-    total.value = res.data.total
+    historyList.value = res.data?.data?.items || []
+    total.value = res.data?.data?.total || 0
+  } catch {
+    historyList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }

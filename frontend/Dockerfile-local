@@ -1,0 +1,32 @@
+# ==========================================
+# 前端 Dockerfile - 使用本地预构建文件
+# 阶段1: Nginx 运行
+# ==========================================
+
+FROM nginx:1.25-alpine AS runtime
+
+LABEL maintainer="Kiro Team"
+LABEL description="数据仓库元数据管理系统 - 前端运行镜像"
+LABEL version="1.0.0"
+
+# 安装 curl 用于健康检查
+RUN apk add --no-cache curl
+
+# 删除默认 Nginx 配置
+RUN rm -rf /etc/nginx/conf.d/default.conf
+
+# 复制自定义 Nginx 配置
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# 从本地构建目录复制静态文件（本地已预先构建）
+COPY dist /usr/share/nginx/html
+
+# 暴露端口
+EXPOSE 80
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:80/ || exit 1
+
+# 启动 Nginx
+CMD ["nginx", "-g", "daemon off;"]

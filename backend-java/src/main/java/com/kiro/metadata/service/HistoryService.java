@@ -196,6 +196,27 @@ public class HistoryService {
         
         return changeHistoryRepository.selectList(queryWrapper);
     }
+
+    /**
+     * 获取所有变更历史（分页）
+     * 
+     * @param entityType 可选的实体类型过滤
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @return 分页变更历史
+     */
+    public Page<ChangeHistory> getAllHistory(String entityType, int page, int pageSize) {
+        log.info("查询所有变更历史, 实体类型: {}, 页码: {}, 每页: {}", entityType, page, pageSize);
+        
+        QueryWrapper<ChangeHistory> queryWrapper = new QueryWrapper<>();
+        if (entityType != null && !entityType.isEmpty()) {
+            queryWrapper.eq("entity_type", entityType);
+        }
+        queryWrapper.orderByDesc("changed_at");
+        
+        Page<ChangeHistory> pageParam = new Page<>(page, pageSize);
+        return changeHistoryRepository.selectPage(pageParam, queryWrapper);
+    }
     
     /**
      * 获取实体的变更统计

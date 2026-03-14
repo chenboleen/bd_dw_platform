@@ -165,8 +165,9 @@ public class MetadataService {
         
         // 排序
         if (sortBy != null && !sortBy.isEmpty()) {
+            String dbColumn = camelToSnake(sortBy);
             boolean isAsc = "asc".equalsIgnoreCase(sortOrder);
-            queryWrapper.orderBy(true, isAsc, sortBy);
+            queryWrapper.orderBy(true, isAsc, dbColumn);
         } else {
             // 默认按更新时间倒序
             queryWrapper.orderByDesc("updated_at");
@@ -175,6 +176,29 @@ public class MetadataService {
         // 分页查询
         Page<TableMetadata> pageParam = new Page<>(page, pageSize);
         return tableRepository.selectPage(pageParam, queryWrapper);
+    }
+    
+    /**
+     * 驼峰命名转下划线命名
+     * 
+     * @param camelCase 驼峰命名字符串
+     * @return 下划线命名字符串
+     */
+    private String camelToSnake(String camelCase) {
+        if (camelCase == null || camelCase.isEmpty()) {
+            return camelCase;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(Character.toLowerCase(camelCase.charAt(0)));
+        for (int i = 1; i < camelCase.length(); i++) {
+            char c = camelCase.charAt(i);
+            if (Character.isUpperCase(c)) {
+                sb.append('_').append(Character.toLowerCase(c));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
     
     /**

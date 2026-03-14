@@ -22,10 +22,14 @@ export const useTableStore = defineStore('table', () => {
     loading.value = true
     try {
       const response = await tableApi.listTables(filter.value, pagination.value)
-      const data: PagedResponse<TableMetadata> = response.data
-      tables.value = data.items
-      total.value = data.total
+      const data = response.data
+      tables.value = (data?.data || []) as TableMetadata[]
+      total.value = data?.total || 0
+      if (data?.page) pagination.value.page = data.page
+      if (data?.size) pagination.value.pageSize = data.size
     } catch {
+      tables.value = []
+      total.value = 0
       ElMessage.error('获取表列表失败')
     } finally {
       loading.value = false

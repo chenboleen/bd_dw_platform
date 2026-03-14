@@ -21,7 +21,27 @@ public class ExportRequest {
      * 导出类型(CSV/JSON)
      */
     @NotBlank(message = "导出类型不能为空")
-    private String exportType;
+    private String format;
+    
+    /**
+     * 数据库名过滤
+     */
+    private String databaseName;
+    
+    /**
+     * 表类型过滤
+     */
+    private String tableType;
+    
+    /**
+     * 开始日期
+     */
+    private String startDate;
+    
+    /**
+     * 结束日期
+     */
+    private String endDate;
     
     /**
      * 过滤条件(JSON格式)
@@ -32,4 +52,11 @@ public class ExportRequest {
      * 是否包含字段信息
      */
     private Boolean includeColumns = true;
+    
+    /**
+     * 获取导出类型（兼容旧代码）
+     */
+    public String getExportType() {
+        return format;
+    }
 }

@@ -19,6 +19,8 @@ services:
       MYSQL_USER: ${MYSQL_USER:-metadata_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-metadata_pass}
       TZ: Asia/Shanghai
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
@@ -145,7 +147,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-local
     container_name: metadata-frontend
     restart: unless-stopped
     ports:
