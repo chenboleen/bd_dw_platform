@@ -1,0 +1,17 @@
+# 生产环境配置（Docker 部署）
+# 环境变量由 docker-compose.yml 注入，Spring Boot 自动绑定 SPRING_* 前缀变量
+
+# Elasticsearch 配置（从环境变量 ELASTICSEARCH_URIS 读取）
+elasticsearch:
+  uris: ${ELASTICSEARCH_URIS:http://elasticsearch:9200}
+  username: ${ELASTICSEARCH_USERNAME:}
+  password: ${ELASTICSEARCH_PASSWORD:}
+  connection-timeout: 5000
+  socket-timeout: 30000
+
+# 日志级别（生产环境降低日志量）
+logging:
+  level:
+    root: WARN
+    com.kiro.metadata: INFO
+    org.springframework.security: WARN

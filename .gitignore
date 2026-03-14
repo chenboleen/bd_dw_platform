@@ -1,0 +1,65 @@
+# ==========================================
+# 数据仓库元数据管理系统 - Git 忽略文件
+# ==========================================
+
+# 后端 (Java)
+backend-java/target/
+backend-java/pom.xml.tag
+backend-java/pom.xml.releaseBackup
+backend-java/pom.xml.versionsBackup
+backend-java/pom.xml.next
+backend-java/release.properties
+backend-java/dependency-reduced-pom.xml
+backend-java/buildNumber.properties
+backend-java/.mvn/timing.properties
+backend-java/.mvn/wrapper/maven-wrapper.jar
+backend-java/logs/
+backend-java/*.log
+backend-java/exports/
+backend-java/.jacoco/
+backend-java/jacoco.exec
+
+# 前端 (Node.js/Vue)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.local
+frontend/.DS_Store
+frontend/Thumbs.db
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Docker
+.dockerignore
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 临时日志
+temp-logs/
+
+# 测试和覆盖率
+*.class
+*.jar
+*.war
+*.ear
