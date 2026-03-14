@@ -55,3 +55,11 @@ export const getCatalogFlat = () =>
 /** 将表关联到数据域 */
 export const addTableToCatalog = (catalogId: number, tableId: number) =>
   apiClient.post(`/catalogs/${catalogId}/tables/${tableId}`)
+
+/** 获取所有数据库名列表（用于下拉筛选） */
+export const getDatabases = () =>
+  apiClient.get<string[]>('/tables/databases')
+
+/** 从数据域移除表关联 */
+export const removeTableFromCatalog = (catalogId: number, tableId: number) =>
+  apiClient.delete(`/catalogs/${catalogId}/tables/${tableId}`)

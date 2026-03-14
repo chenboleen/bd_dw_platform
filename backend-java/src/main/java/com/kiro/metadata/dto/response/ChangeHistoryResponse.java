@@ -62,4 +62,14 @@ public class ChangeHistoryResponse {
      * 变更人ID
      */
     private Long changedBy;
+
+    /**
+     * 变更人用户名
+     */
+    private String changedByName;
+
+    /**
+     * 实体名称（表名/字段名/目录名等）
+     */
+    private String entityName;
 }

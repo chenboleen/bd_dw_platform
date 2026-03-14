@@ -77,6 +77,12 @@
           </template>
         </el-table-column>
 
+        <el-table-column prop="entityName" label="对象名称" width="160">
+          <template #default="{ row }">
+            <span class="font-mono">{{ row.entityName || '-' }}</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="operation" label="操作" width="90">
           <template #default="{ row }">
             <el-tag :type="operationTag(row.operation)" size="small">{{ operationLabel(row.operation) }}</el-tag>
@@ -165,6 +171,7 @@
           <el-descriptions-item label="操作人">{{ selectedHistory.changedByName || `用户 ${selectedHistory.changedBy}` }}</el-descriptions-item>
           <el-descriptions-item label="实体类型">{{ entityTypeLabel(selectedHistory.entityType) }}</el-descriptions-item>
           <el-descriptions-item label="实体 ID">{{ selectedHistory.entityId }}</el-descriptions-item>
+          <el-descriptions-item label="对象名称" :span="2">{{ selectedHistory.entityName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="操作类型">{{ operationLabel(selectedHistory.operation) }}</el-descriptions-item>
           <el-descriptions-item label="字段名">{{ selectedHistory.fieldName || '-' }}</el-descriptions-item>
         </el-descriptions>

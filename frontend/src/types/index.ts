@@ -1,4 +1,4 @@
-// 数据仓库元数据管理系�?- TypeScript 类型定义
+// 数据仓库元数据管理系统 - TypeScript 类型定义
 
 // ==================== 通用类型 ====================
 
@@ -73,7 +73,7 @@ export interface RefreshTokenRequest {
 
 // ==================== 表元数据 ====================
 
-/** 表类�?*/
+/** 表类型 */
 export type TableType = 'TABLE' | 'VIEW' | 'EXTERNAL'
 
 /** 表元数据 */
@@ -89,12 +89,15 @@ export interface TableMetadata {
   dataSizeBytes?: number
   ownerId?: number
   ownerName?: string
+  catalogId?: number
+  catalogName?: string
   createdAt: string
   updatedAt: string
   columns?: ColumnMetadata[]
+  catalogLevel?: number
 }
 
-/** 创建表请�?*/
+/** 创建表请求 */
 export interface TableCreateRequest {
   databaseName: string
   tableName: string
@@ -105,7 +108,7 @@ export interface TableCreateRequest {
   dataSizeBytes?: number
 }
 
-/** 更新表请�?*/
+/** 更新表请求 */
 export interface TableUpdateRequest {
   description?: string
   storageFormat?: string
@@ -113,9 +116,9 @@ export interface TableUpdateRequest {
   dataSizeBytes?: number
 }
 
-// ==================== 字段元数�?====================
+// ==================== 字段元数据 ====================
 
-/** 字段元数�?*/
+/** 字段元数据 */
 export interface ColumnMetadata {
   id: number
   tableId: number
@@ -155,12 +158,12 @@ export interface ReorderColumnsRequest {
   columnOrders: { columnId: number; order: number }[]
 }
 
-// ==================== 血缘关�?====================
+// ==================== 血缘关系 ====================
 
-/** 血缘类�?*/
+/** 血缘类型 */
 export type LineageType = 'DIRECT' | 'INDIRECT'
 
-/** 血缘关�?*/
+/** 血缘关系 */
 export interface Lineage {
   id: number
   sourceTableId: number
@@ -170,7 +173,7 @@ export interface Lineage {
   createdAt: string
 }
 
-/** 创建血缘请�?*/
+/** 创建血缘请求 */
 export interface LineageCreateRequest {
   sourceTableId: number
   targetTableId: number
@@ -189,7 +192,7 @@ export interface LineageNode {
   tableType?: string
 }
 
-/** 血缘图�?*/
+/** 血缘图边 */
 export interface LineageEdge {
   source: number
   target: number
@@ -259,6 +262,7 @@ export interface ChangeHistory {
   id: number
   entityType: string
   entityId: number
+  entityName?: string
   operation: OperationType
   fieldName?: string
   oldValue?: string
@@ -281,7 +285,7 @@ export interface SearchRequest {
   pageSize?: number
 }
 
-/** 搜索结果�?*/
+/** 搜索结果项 */
 export interface SearchResultItem {
   id: number
   databaseName: string
@@ -311,7 +315,7 @@ export interface SearchResponse {
 /** 导出格式 */
 export type ExportFormat = 'CSV' | 'JSON'
 
-/** 任务状�?*/
+/** 任务状态 */
 export type TaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
 
 /** 导出请求 */
@@ -323,7 +327,7 @@ export interface ExportRequest {
   endDate?: string
 }
 
-/** 导出状态响�?*/
+/** 导出状态响应 */
 export interface ExportStatusResponse {
   taskId: number
   status: TaskStatus
@@ -337,19 +341,23 @@ export interface ExportStatusResponse {
 
 /** 导入结果 */
 export interface ImportResult {
-  successCount: number
-  failureCount: number
-  errors: { row: number; message: string }[]
+
+  databaseName?: string
+  tableType?: TableType
+  ownerId?: number
+  tableName?: string
+  keyword?: string
+  startDate?: string
+  endDate?: string
 }
-
-// ==================== 过滤条件 ====================
-
 /** 表格过滤条件 */
 export interface TableFilter {
   databaseName?: string
   tableType?: TableType
   ownerId?: number
   tableName?: string
+  keyword?: string
+  catalogId?: number
   startDate?: string
   endDate?: string
 }

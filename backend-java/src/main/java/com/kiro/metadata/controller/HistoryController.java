@@ -3,6 +3,12 @@ package com.kiro.metadata.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kiro.metadata.dto.response.ChangeHistoryResponse;
 import com.kiro.metadata.entity.ChangeHistory;
+import com.kiro.metadata.entity.ColumnMetadata;
+import com.kiro.metadata.entity.TableMetadata;
+import com.kiro.metadata.entity.User;
+import com.kiro.metadata.repository.ColumnRepository;
+import com.kiro.metadata.repository.TableRepository;
+import com.kiro.metadata.repository.UserRepository;
 import com.kiro.metadata.service.HistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +41,9 @@ import java.util.stream.Collectors;
 public class HistoryController {
 
     private final HistoryService historyService;
+    private final UserRepository userRepository;
+    private final TableRepository tableRepository;
+    private final ColumnRepository columnRepository;
 
     /**
      * 获取实体变更历史（分页）
@@ -224,19 +233,50 @@ public class HistoryController {
     // ==================== 私有辅助方法 ====================
 
     /**
-     * 将变更历史实体转换为响应 DTO
+     * 将变更历史实体转换为响应 DTO，同时查询操作人用户名和实体名称
      */
     private ChangeHistoryResponse convertToResponse(ChangeHistory history) {
+        // 查询操作人用户名
+        String changedByName = null;
+        if (history.getChangedBy() != null) {
+            User user = userRepository.selectById(history.getChangedBy());
+            if (user != null) {
+                changedByName = user.getUsername();
+            }
+        }
+
+        // 根据实体类型查询实体名称
+        String entityName = null;
+        if (history.getEntityId() != null && history.getEntityType() != null) {
+            switch (history.getEntityType()) {
+                case "TABLE" -> {
+                    TableMetadata table = tableRepository.selectById(history.getEntityId());
+                    if (table != null) {
+                        entityName = table.getDatabaseName() + "." + table.getTableName();
+                    }
+                }
+                case "COLUMN" -> {
+                    ColumnMetadata col = columnRepository.selectById(history.getEntityId());
+                    if (col != null) {
+                        entityName = col.getColumnName();
+                    }
+                }
+                default -> entityName = null;
+            }
+        }
+
         return ChangeHistoryResponse.builder()
             .id(history.getId())
             .entityType(history.getEntityType())
             .entityId(history.getEntityId())
+            .entityName(entityName)
             .operation(history.getOperation() != null ? history.getOperation().name() : null)
             .fieldName(history.getFieldName())
             .oldValue(history.getOldValue())
             .newValue(history.getNewValue())
             .changedAt(history.getChangedAt())
             .changedBy(history.getChangedBy())
+            .changedByName(changedByName)
             .build();
     }
 

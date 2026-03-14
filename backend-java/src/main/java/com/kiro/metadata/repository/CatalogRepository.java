@@ -97,4 +97,21 @@ public interface CatalogRepository extends BaseMapper<Catalog> {
             "INNER JOIN table_catalog tc ON c.id = tc.catalog_id " +
             "WHERE tc.table_id = #{tableId} LIMIT 1")
     Catalog findCatalogByTableId(@Param("tableId") Long tableId);
+
+    /**
+     * 移除表的所有目录关联（用于"一表一目录"约束）
+     * 
+     * @param tableId 表ID
+     */
+    @Delete("DELETE FROM table_catalog WHERE table_id = #{tableId}")
+    void removeAllCatalogsFromTable(@Param("tableId") Long tableId);
+
+    /**
+     * 查询路径以指定前缀开头的所有子目录（用于递归更新 path）
+     * 
+     * @param pathPrefix 路径前缀
+     * @return 子目录列表
+     */
+    @Select("SELECT * FROM catalog WHERE path LIKE CONCAT(#{pathPrefix}, '/%')")
+    List<Catalog> findByPathPrefix(@Param("pathPrefix") String pathPrefix);
 }

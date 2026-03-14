@@ -25,20 +25,21 @@ export interface UpdateUserPayload {
   newPassword?: string
 }
 
+// baseURL 已经是 /api/v1，这里只写相对路径
 export const listUsers = (params: { keyword?: string; role?: string; page?: number; pageSize?: number }) =>
-  client.get('/api/v1/users', { params })
+  client.get('/users', { params })
 
 export const getUser = (id: number) =>
-  client.get(`/api/v1/users/${id}`)
+  client.get(`/users/${id}`)
 
 export const createUser = (data: CreateUserPayload) =>
-  client.post('/api/v1/users', data)
+  client.post('/users', data)
 
 export const updateUser = (id: number, data: UpdateUserPayload) =>
-  client.put(`/api/v1/users/${id}`, data)
+  client.put(`/users/${id}`, data)
 
 export const deleteUser = (id: number) =>
-  client.delete(`/api/v1/users/${id}`)
+  client.delete(`/users/${id}`)
 
 export const resetPassword = (id: number, newPassword: string) =>
-  client.post(`/api/v1/users/${id}/reset-password`, { newPassword })
+  client.post(`/users/${id}/reset-password`, { newPassword })

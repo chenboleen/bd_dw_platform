@@ -18,23 +18,40 @@
     <!-- 查询控制面板 -->
     <el-card shadow="never" class="control-panel">
       <div class="control-row">
-        <el-select
-          v-model="selectedTableId"
-          placeholder="选择中心表"
-          filterable
-          remote
-          :remote-method="searchTables"
-          :loading="searchLoading"
-          style="width: 280px"
-          @change="loadGraph"
-        >
-          <el-option
-            v-for="table in tableOptions"
-            :key="table.id"
-            :label="`${table.databaseName}.${table.tableName}`"
-            :value="table.id"
-          />
-        </el-select>
+        <div class="search-group">
+          <el-select
+            v-model="filterDatabase"
+            placeholder="所属库（可选）"
+            clearable
+            style="width: 160px"
+            @change="handleDatabaseFilter"
+          >
+            <el-option
+              v-for="db in databaseOptions"
+              :key="db"
+              :label="db"
+              :value="db"
+            />
+          </el-select>
+
+          <el-select
+            v-model="selectedTableId"
+            placeholder="搜索表名（模糊匹配）"
+            filterable
+            remote
+            :remote-method="searchTables"
+            :loading="searchLoading"
+            style="width: 280px"
+            @change="loadGraph"
+          >
+            <el-option
+              v-for="table in tableOptions"
+              :key="table.id"
+              :label="`${table.databaseName}.${table.tableName}`"
+              :value="table.id"
+            />
+          </el-select>
+        </div>
 
         <el-radio-group v-model="direction" @change="loadGraph">
           <el-radio-button value="upstream">上游</el-radio-button>
@@ -249,6 +266,8 @@ const graphData = ref<LineageGraph | null>(null)
 const graphLoading = ref(false)
 const searchLoading = ref(false)
 const tableOptions = ref<TableMetadata[]>([])
+const databaseOptions = ref<string[]>([])
+const filterDatabase = ref<string>('')
 const impactReport = ref<ImpactReport | null>(null)
 const impactLoading = ref(false)
 const sqlText = ref('')
@@ -268,21 +287,42 @@ const lineageForm = reactive<LineageCreateRequest>({
 
 // 从路由参数初始化
 onMounted(() => {
+  loadDatabases()
   if (route.query.tableId) {
     selectedTableId.value = Number(route.query.tableId)
     loadGraph()
   }
 })
 
+async function loadDatabases() {
+  try {
+    const res = await tableApi.getDatabases()
+    databaseOptions.value = res.data?.data || res.data || []
+  } catch {
+    // 加载失败不影响主功能
+  }
+}
+
 async function searchTables(query: string) {
   if (!query) return
   searchLoading.value = true
   try {
-    const res = await tableApi.listTables({ tableName: query }, { page: 1, pageSize: 20 })
+    const filter: import('@/types').TableFilter = { tableName: query }
+    if (filterDatabase.value) {
+      filter.databaseName = filterDatabase.value
+    }
+    const res = await tableApi.listTables(filter, { page: 1, pageSize: 20 })
     tableOptions.value = res.data?.data?.items ?? res.data?.items ?? []
   } finally {
     searchLoading.value = false
   }
+}
+
+function handleDatabaseFilter() {
+  // 切换数据库筛选时清空已选表和搜索结果
+  selectedTableId.value = null
+  tableOptions.value = []
+  graphData.value = null
 }
 
 async function loadGraph() {
@@ -354,8 +394,10 @@ async function handleCreateLineage() {
 
 function resetGraph() {
   selectedTableId.value = null
+  filterDatabase.value = ''
   graphData.value = null
   impactReport.value = null
+  tableOptions.value = []
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null
@@ -522,6 +564,12 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.search-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .depth-control {

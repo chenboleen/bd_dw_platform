@@ -141,6 +141,86 @@ public class CatalogController {
     }
 
     /**
+     * 更新目录名称和描述
+     * 无论是否绑定表都可以修改，同时递归更新子目录 path
+     * 仅 ADMIN 角色可操作
+     *
+     * @param id      目录ID
+     * @param request 更新请求（name、description）
+     * @return 更新后的目录信息
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "更新目录",
+        description = "更新目录名称和描述，自动递归更新所有子目录的路径，需要 ADMIN 角色",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "更新成功"),
+        @ApiResponse(responseCode = "400", description = "请求参数错误"),
+        @ApiResponse(responseCode = "401", description = "未认证"),
+        @ApiResponse(responseCode = "403", description = "权限不足，需要 ADMIN 角色"),
+        @ApiResponse(responseCode = "404", description = "目录不存在")
+    })
+    public ResponseEntity<Map<String, Object>> updateCatalog(
+            @Parameter(description = "目录ID", required = true)
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        log.info("更新目录请求, ID: {}", id);
+
+        String name = request.get("name");
+        String description = request.get("description");
+
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest().body(buildSuccessResponse("目录名称不能为空", null));
+        }
+
+        Long userId = getCurrentUserId();
+        Catalog updated = catalogService.updateCatalog(id, name, description, userId);
+
+        CatalogResponse response = convertToResponse(updated);
+        Map<String, Object> result = buildSuccessResponse("目录更新成功", response);
+
+        log.info("目录更新成功, ID: {}", id);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 删除目录节点（仅叶子节点可删除）
+     * 仅 ADMIN 角色可操作
+     *
+     * @param id 目录ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "删除目录",
+        description = "删除目录节点，仅叶子节点（无子目录且无关联表）可删除，需要 ADMIN 角色",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "删除成功"),
+        @ApiResponse(responseCode = "400", description = "目录下存在子目录或关联表"),
+        @ApiResponse(responseCode = "401", description = "未认证"),
+        @ApiResponse(responseCode = "403", description = "权限不足，需要 ADMIN 角色"),
+        @ApiResponse(responseCode = "404", description = "目录不存在")
+    })
+    public ResponseEntity<Map<String, Object>> deleteCatalog(
+            @Parameter(description = "目录ID", required = true)
+            @PathVariable Long id) {
+        log.info("删除目录请求, ID: {}", id);
+
+        Long userId = getCurrentUserId();
+        catalogService.deleteCatalog(id, userId);
+
+        Map<String, Object> result = buildSuccessResponse("目录删除成功", null);
+        log.info("目录删除成功, ID: {}", id);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * 移动目录节点
      * 仅 ADMIN 角色可操作
      *

@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -161,6 +162,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
     
+    /**
+     * 处理 Spring MVC 路由不存在异常（404）
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request) {
+        log.warn("请求路径不存在: {}", request.getRequestURI());
+
+        ErrorResponse error = ErrorResponse.builder()
+            .code("NOT_FOUND")
+            .message("请求的接口路径不存在: " + request.getRequestURI())
+            .details(ex.getMessage())
+            .timestamp(LocalDateTime.now())
+            .path(request.getRequestURI())
+            .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
     /**
      * 处理所有未捕获的异常
      * 

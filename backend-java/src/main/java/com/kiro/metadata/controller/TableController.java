@@ -1,5 +1,6 @@
 package com.kiro.metadata.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kiro.metadata.dto.request.TableCreateRequest;
 import com.kiro.metadata.dto.request.TableUpdateRequest;
@@ -11,6 +12,7 @@ import com.kiro.metadata.entity.ColumnMetadata;
 import com.kiro.metadata.entity.TableMetadata;
 import com.kiro.metadata.entity.User;
 import com.kiro.metadata.repository.CatalogRepository;
+import com.kiro.metadata.repository.TableRepository;
 import com.kiro.metadata.repository.UserRepository;
 import com.kiro.metadata.service.ColumnService;
 import com.kiro.metadata.service.MetadataService;
@@ -56,6 +58,7 @@ public class TableController {
     private final ColumnService columnService;
     private final UserRepository userRepository;
     private final CatalogRepository catalogRepository;
+    private final TableRepository tableRepository;
 
     /**
      * 创建表元数据
@@ -99,6 +102,28 @@ public class TableController {
     }
 
     /**
+     * 获取所有数据库名列表（去重，用于下拉筛选）
+     *
+     * @return 数据库名列表
+     */
+    @GetMapping("/databases")
+    @Operation(
+        summary = "获取数据库名列表",
+        description = "获取所有表中不重复的数据库名，用于下拉筛选",
+        security = @SecurityRequirement(name = "Bearer认证")
+    )
+    public ResponseEntity<Map<String, Object>> getDatabases() {
+        log.debug("获取数据库名列表");
+        QueryWrapper<TableMetadata> qw = new QueryWrapper<>();
+        qw.select("DISTINCT database_name").orderByAsc("database_name");
+        List<String> databases = tableRepository.selectList(qw)
+            .stream()
+            .map(TableMetadata::getDatabaseName)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(buildSuccessResponse("获取数据库列表成功", databases));
+    }
+
+    /**
      * 查询表列表（分页）
      *
      * @param databaseName 数据库名过滤（可选）
@@ -131,7 +156,7 @@ public class TableController {
             @RequestParam(required = false) String databaseName,
             @Parameter(description = "表类型过滤（TABLE/VIEW/EXTERNAL）")
             @RequestParam(required = false) String tableType,
-            @Parameter(description = "关键词模糊查询（表名/描述）")
+            @Parameter(description = "关键词模糊查询（表名/描述/表owner）")
             @RequestParam(required = false) String keyword,
             @Parameter(description = "数据域ID过滤")
             @RequestParam(required = false) Long catalogId,

@@ -325,7 +325,7 @@ async function handleAddTable() {
   submitting.value = true
   try {
     await catalogApi.addTableToCatalog(selectedCatalog.value.id, selectedTableToAdd.value)
-    ElMessage.success('表关联成功')
+    ElMessage.success('表关联成功（已自动移除原有目录关联）')
     showAddTableDialog.value = false
     selectedTableToAdd.value = null
     await handleNodeClick(selectedCatalog.value)

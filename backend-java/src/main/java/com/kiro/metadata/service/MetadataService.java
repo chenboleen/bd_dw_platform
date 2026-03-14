@@ -6,9 +6,11 @@ import com.kiro.metadata.document.TableDocument;
 import com.kiro.metadata.entity.ChangeHistory;
 import com.kiro.metadata.entity.OperationType;
 import com.kiro.metadata.entity.TableMetadata;
+import com.kiro.metadata.entity.User;
 import com.kiro.metadata.repository.CatalogRepository;
 import com.kiro.metadata.repository.ChangeHistoryRepository;
 import com.kiro.metadata.repository.TableRepository;
+import com.kiro.metadata.repository.UserRepository;
 import com.kiro.metadata.util.TableDocumentMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +41,7 @@ public class MetadataService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final SearchService searchService;
     private final CatalogRepository catalogRepository;
+    private final UserRepository userRepository;
     
     private static final String CACHE_KEY_PREFIX = "table:";
     private static final long CACHE_TTL_HOURS = 1;
@@ -159,10 +162,26 @@ public class MetadataService {
                 queryWrapper.eq("owner_id", filters.get("ownerId"));
             }
             
-            // 关键词模糊查询（表名 OR 描述）
+            // 关键词模糊查询（表名 OR 描述 OR 所有者用户名）
             if (filters.containsKey("keyword")) {
                 String kw = filters.get("keyword").toString();
-                queryWrapper.and(w -> w.like("table_name", kw).or().like("description", kw));
+                // 先查出用户名包含关键词的用户ID列表
+                List<Long> matchedOwnerIds = userRepository.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
+                        .like(User::getUsername, kw)
+                ).stream().map(User::getId).collect(Collectors.toList());
+
+                if (matchedOwnerIds.isEmpty()) {
+                    // 无匹配用户，只搜索表名和描述
+                    queryWrapper.and(w -> w.like("table_name", kw).or().like("description", kw));
+                } else {
+                    // 搜索表名、描述或所有者
+                    queryWrapper.and(w -> w
+                        .like("table_name", kw)
+                        .or().like("description", kw)
+                        .or().in("owner_id", matchedOwnerIds)
+                    );
+                }
             }
 
             // 数据域过滤：先查出该 catalog 下的 tableId 列表

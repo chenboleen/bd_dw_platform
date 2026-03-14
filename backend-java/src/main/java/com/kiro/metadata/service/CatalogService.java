@@ -187,7 +187,92 @@ public class CatalogService {
     }
     
     /**
-     * 将表添加到目录
+     * 更新目录名称和描述
+     * 同时递归更新所有子目录的 path
+     *
+     * @param id          目录ID
+     * @param name        新名称
+     * @param description 新描述
+     * @param userId      操作用户ID
+     * @return 更新后的目录
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Catalog updateCatalog(Long id, String name, String description, Long userId) {
+        log.info("更新目录, ID: {}, 新名称: {}", id, name);
+
+        Catalog catalog = catalogRepository.selectById(id);
+        if (catalog == null) {
+            throw new IllegalArgumentException("目录不存在, ID: " + id);
+        }
+
+        String oldPath = catalog.getPath();
+        String oldValue = catalog.toString();
+
+        // 计算新 path
+        String newPath;
+        if (catalog.getParentId() != null) {
+            Catalog parent = catalogRepository.selectById(catalog.getParentId());
+            newPath = (parent != null ? parent.getPath() : "") + "/" + name;
+        } else {
+            newPath = "/" + name;
+        }
+
+        catalog.setName(name);
+        catalog.setDescription(description);
+        catalog.setPath(newPath);
+        catalogRepository.updateById(catalog);
+
+        // 递归更新所有子目录的 path（将旧前缀替换为新前缀）
+        if (!oldPath.equals(newPath)) {
+            List<Catalog> descendants = catalogRepository.findByPathPrefix(oldPath);
+            for (Catalog child : descendants) {
+                child.setPath(newPath + child.getPath().substring(oldPath.length()));
+                catalogRepository.updateById(child);
+            }
+            log.info("递归更新子目录 path 完成, 影响 {} 个子目录", descendants.size());
+        }
+
+        // 记录变更历史
+        recordChange(id, OperationType.UPDATE, "name/description", oldValue, catalog.toString(), userId);
+
+        log.info("目录更新成功, ID: {}", id);
+        return catalog;
+    }
+
+    /**
+     * 删除目录节点（仅叶子节点可删除）
+     *
+     * @param id     目录ID
+     * @param userId 操作用户ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteCatalog(Long id, Long userId) {
+        log.info("删除目录, ID: {}", id);
+
+        Catalog catalog = catalogRepository.selectById(id);
+        if (catalog == null) {
+            throw new IllegalArgumentException("目录不存在, ID: " + id);
+        }
+
+        // 检查是否有子目录
+        List<Catalog> children = catalogRepository.findByParentId(id);
+        if (!children.isEmpty()) {
+            throw new IllegalArgumentException("该目录下存在子目录，请先删除子目录");
+        }
+
+        // 检查是否有关联的表
+        List<TableMetadata> tables = catalogRepository.getTablesInCatalog(id);
+        if (!tables.isEmpty()) {
+            throw new IllegalArgumentException("该目录下存在关联的表，请先移除关联");
+        }
+
+        catalogRepository.deleteById(id);
+        recordChange(id, OperationType.DELETE, null, catalog.toString(), null, userId);
+        log.info("目录删除成功, ID: {}", id);
+    }
+
+    /**
+     * 将表添加到目录（一表一目录约束：自动移除旧关联）
      * 
      * @param tableId 表ID
      * @param catalogId 目录ID
@@ -208,8 +293,12 @@ public class CatalogService {
         if (catalog == null) {
             throw new IllegalArgumentException("目录不存在, ID: " + catalogId);
         }
+
+        // 一表一目录：先移除该表的所有旧目录关联
+        catalogRepository.removeAllCatalogsFromTable(tableId);
+        log.debug("已移除表 {} 的旧目录关联", tableId);
         
-        // 插入关联关系(使用原生SQL)
+        // 插入新关联关系
         catalogRepository.addTableToCatalog(tableId, catalogId);
         
         log.info("表添加到目录成功");
