@@ -97,6 +97,7 @@ Authorization: Bearer <accessToken>
 | 方法 | 路径 | 描述 | 权限 |
 |------|------|------|------|
 | GET | `/tree` | 获取目录树 | 所有角色 |
+| GET | `/flat` | 获取目录扁平列表（供下拉选择） | 所有角色 |
 | POST | `/` | 创建目录节点 | ADMIN |
 | PUT | `/{id}` | 更新目录节点 | ADMIN |
 | DELETE | `/{id}` | 删除目录节点 | ADMIN |
@@ -115,6 +116,7 @@ Authorization: Bearer <accessToken>
 
 | 方法 | 路径 | 描述 | 权限 |
 |------|------|------|------|
+| GET | `/` | 全量查询变更历史（支持分页） | 所有角色 |
 | GET | `/entity/{entityType}/{entityId}` | 获取实体变更历史 | 所有角色 |
 | GET | `/user/{username}` | 获取用户操作历史 | ADMIN |
 

@@ -172,10 +172,23 @@
     </template>
 
     <!-- 编辑对话框 -->
-    <el-dialog v-model="showEditDialog" title="编辑表信息" width="500px" destroy-on-close>
-      <el-form :model="editForm" label-width="90px">
+    <el-dialog v-model="showEditDialog" title="编辑表信息" width="560px" destroy-on-close>
+      <el-form :model="editForm" label-width="100px" label-position="left">
+        <el-form-item label="数据库名">
+          <el-input :value="table?.databaseName" disabled />
+        </el-form-item>
+        <el-form-item label="表名">
+          <el-input :value="table?.tableName" disabled class="font-mono" />
+        </el-form-item>
+        <el-form-item label="表类型">
+          <el-select :model-value="table?.tableType" disabled style="width: 100%">
+            <el-option label="普通表" value="TABLE" />
+            <el-option label="视图" value="VIEW" />
+            <el-option label="外部表" value="EXTERNAL" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="editForm.description" type="textarea" :rows="3" />
+          <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="请输入表的描述信息" />
         </el-form-item>
         <el-form-item label="存储格式">
           <el-select v-model="editForm.storageFormat" clearable style="width: 100%">
@@ -204,7 +217,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleUpdateTable">保存</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleUpdateTable">保存修改</el-button>
       </template>
     </el-dialog>
 

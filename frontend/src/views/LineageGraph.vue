@@ -286,10 +286,17 @@ const lineageForm = reactive<LineageCreateRequest>({
 })
 
 // 从路由参数初始化
-onMounted(() => {
+onMounted(async () => {
   loadDatabases()
   if (route.query.tableId) {
-    selectedTableId.value = Number(route.query.tableId)
+    const tableId = Number(route.query.tableId)
+    selectedTableId.value = tableId
+    // 预加载该表信息到 tableOptions，确保搜索框显示表名而非 ID
+    try {
+      const res = await tableApi.getTableById(tableId)
+      const t = res.data?.data ?? res.data
+      if (t) tableOptions.value = [t]
+    } catch { /* 忽略 */ }
     loadGraph()
   }
 })
@@ -425,20 +432,33 @@ function renderChart() {
   // 找到中心节点
   const centerNodeId = selectedTableId.value
 
-  // 颜色定义：中心表=橙色，上游表（depth<0）=绿色，下游表（depth>0）=蓝色
+  // 颜色定义：中心表=橙色，上游表=绿色，下游表=蓝色
   const COLOR_CENTER = '#F59E0B'
   const COLOR_UPSTREAM = '#10B981'
   const COLOR_DOWNSTREAM = '#3B82F6'
 
+  // 通过边的 type 字段判断节点角色
+  // upstream 边：source=上游节点, target=当前表（上游节点指向中心）
+  // downstream 边：source=当前表, target=下游节点（中心指向下游节点）
+  const upstreamNodeIds = new Set<number>()
+  const downstreamNodeIds = new Set<number>()
+  edges.forEach((edge: any) => {
+    if (edge.type === 'upstream') {
+      upstreamNodeIds.add(Number(edge.source))
+    } else if (edge.type === 'downstream') {
+      downstreamNodeIds.add(Number(edge.target))
+    }
+  })
+
   const getNodeCategory = (node: any) => {
     if (node.id === centerNodeId) return 0  // 中心表
-    if ((node.depth ?? 0) < 0) return 1     // 上游表
-    return 2                                 // 下游表
+    if (upstreamNodeIds.has(node.id)) return 1  // 上游表
+    return 2  // 下游表
   }
 
   const getNodeColor = (node: any) => {
     if (node.id === centerNodeId) return COLOR_CENTER
-    if ((node.depth ?? 0) < 0) return COLOR_UPSTREAM
+    if (upstreamNodeIds.has(node.id)) return COLOR_UPSTREAM
     return COLOR_DOWNSTREAM
   }
 
@@ -527,9 +547,19 @@ function renderChart() {
   chartInstance.setOption(option)
 
   // 点击节点跳转（name 字段存的是 id 字符串）
-  chartInstance.on('click', (params: any) => {
+  chartInstance.on('click', async (params: any) => {
     if (params.dataType === 'node') {
-      selectedTableId.value = Number(params.data.id)
+      const newId = Number(params.data.id)
+      selectedTableId.value = newId
+      // 更新搜索框显示：确保 tableOptions 包含该节点对应的表信息
+      const existing = tableOptions.value.find(t => t.id === newId)
+      if (!existing) {
+        try {
+          const res = await tableApi.getTableById(newId)
+          const t = res.data?.data ?? res.data
+          if (t) tableOptions.value = [t, ...tableOptions.value]
+        } catch { /* 忽略 */ }
+      }
       loadGraph()
     }
   })
