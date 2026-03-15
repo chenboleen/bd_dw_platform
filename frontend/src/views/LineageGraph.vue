@@ -425,15 +425,32 @@ function renderChart() {
   // 找到中心节点
   const centerNodeId = selectedTableId.value
 
+  // 颜色定义：中心表=橙色，上游表（depth<0）=绿色，下游表（depth>0）=蓝色
+  const COLOR_CENTER = '#F59E0B'
+  const COLOR_UPSTREAM = '#10B981'
+  const COLOR_DOWNSTREAM = '#3B82F6'
+
+  const getNodeCategory = (node: any) => {
+    if (node.id === centerNodeId) return 0  // 中心表
+    if ((node.depth ?? 0) < 0) return 1     // 上游表
+    return 2                                 // 下游表
+  }
+
+  const getNodeColor = (node: any) => {
+    if (node.id === centerNodeId) return COLOR_CENTER
+    if ((node.depth ?? 0) < 0) return COLOR_UPSTREAM
+    return COLOR_DOWNSTREAM
+  }
+
   const option: echarts.EChartsOption = {
     tooltip: {
       trigger: 'item',
       formatter: (params: any) => {
         if (params.dataType === 'node') {
-          return `<div style="font-family: 'Fira Code', monospace">
-            <strong>${params.data.name}</strong><br/>
+          return `<div style="font-family: 'Fira Code', monospace; padding: 4px 0">
+            <strong>${params.data.fullName}</strong><br/>
             数据库: ${params.data.databaseName || '-'}<br/>
-            深度: ${params.data.depth}
+            深度: ${params.data.depth ?? 0}
           </div>`
         }
         return `${params.data.source} → ${params.data.target}`
@@ -450,17 +467,18 @@ function renderChart() {
         layout: 'force',
         data: nodes.map(node => ({
           id: String(node.id),
-          name: node.name,
+          // name 用于 ECharts 内部标识，设为 id 字符串避免重名冲突
+          name: String(node.id),
+          // 自定义字段，用于 tooltip 和 label
+          fullName: node.name || `${node.databaseName}.${node.tableName}`,
           databaseName: node.databaseName,
-          depth: node.depth,
-          symbolSize: node.id === centerNodeId ? 50 : 35,
+          depth: node.depth ?? 0,
+          symbolSize: node.id === centerNodeId ? 52 : 36,
           itemStyle: {
-            color: node.id === centerNodeId ? '#F59E0B' :
-                   node.depth === 0 ? '#F59E0B' :
-                   node.depth > 0 ? '#3B82F6' : '#10B981',
+            color: getNodeColor(node),
             borderColor: '#fff',
             borderWidth: 2,
-            shadowBlur: node.id === centerNodeId ? 10 : 0,
+            shadowBlur: node.id === centerNodeId ? 12 : 0,
             shadowColor: 'rgba(245, 158, 11, 0.5)'
           },
           label: {
@@ -468,9 +486,11 @@ function renderChart() {
             position: 'bottom',
             fontSize: 11,
             color: '#1E3A8A',
-            fontFamily: "'Fira Code', monospace"
+            fontFamily: "'Fira Code', monospace",
+            // 显示表全名（db.table）
+            formatter: () => node.name || `${node.databaseName}.${node.tableName}`
           },
-          category: node.id === centerNodeId ? 0 : node.depth > 0 ? 2 : 1
+          category: getNodeCategory(node)
         })),
         links: edges.map(edge => ({
           source: String(edge.source),
@@ -484,16 +504,16 @@ function renderChart() {
           symbolSize: [0, 8]
         })),
         categories: [
-          { name: '中心表' },
-          { name: '上游表' },
-          { name: '下游表' }
+          { name: '中心表', itemStyle: { color: COLOR_CENTER } },
+          { name: '上游表', itemStyle: { color: COLOR_UPSTREAM } },
+          { name: '下游表', itemStyle: { color: COLOR_DOWNSTREAM } }
         ],
         roam: true,
         draggable: true,
         force: {
-          repulsion: 200,
+          repulsion: 220,
           gravity: 0.1,
-          edgeLength: 120,
+          edgeLength: 130,
           layoutAnimation: true
         },
         emphasis: {
@@ -506,7 +526,7 @@ function renderChart() {
 
   chartInstance.setOption(option)
 
-  // 点击节点跳转
+  // 点击节点跳转（name 字段存的是 id 字符串）
   chartInstance.on('click', (params: any) => {
     if (params.dataType === 'node') {
       selectedTableId.value = Number(params.data.id)

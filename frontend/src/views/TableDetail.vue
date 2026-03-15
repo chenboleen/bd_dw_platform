@@ -182,10 +182,24 @@
             <el-option label="ORC" value="ORC" />
             <el-option label="Parquet" value="PARQUET" />
             <el-option label="TextFile" value="TEXTFILE" />
+            <el-option label="Avro" value="AVRO" />
           </el-select>
         </el-form-item>
-        <el-form-item label="存储路径">
-          <el-input v-model="editForm.storageLocation" />
+        <el-form-item label="数据域">
+          <el-select
+            v-model="selectedCatalogId"
+            placeholder="选择数据域（可选）"
+            clearable
+            filterable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in catalogFlatList"
+              :key="item.id"
+              :label="item.path || item.name"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -242,6 +256,13 @@ import { ElMessage } from 'element-plus'
 import PermissionGuard from '@/components/PermissionGuard.vue'
 import dayjs from 'dayjs'
 
+interface CatalogFlatItem {
+  id: number
+  name: string
+  path: string
+  level: number
+}
+
 const route = useRoute()
 const router = useRouter()
 
@@ -253,6 +274,8 @@ const showEditDialog = ref(false)
 const showAddColumnDialog = ref(false)
 const editingColumn = ref<ColumnMetadata | null>(null)
 const submitting = ref(false)
+const catalogFlatList = ref<CatalogFlatItem[]>([])
+const selectedCatalogId = ref<number | null>(null)
 
 const editForm = reactive<TableUpdateRequest>({
   description: '',
@@ -294,6 +317,7 @@ async function loadData() {
         storageFormat: table.value.storageFormat || '',
         storageLocation: table.value.storageLocation || ''
       })
+      selectedCatalogId.value = (table.value as any).catalogId ?? null
     }
   } finally {
     loading.value = false
@@ -304,7 +328,23 @@ async function handleUpdateTable() {
   if (!table.value) return
   submitting.value = true
   try {
-    await tableApi.updateTable(table.value.id, editForm)
+    // 自动生成存储路径
+    const storageLocation = table.value.storageLocation ||
+      `hdfs://namenode/warehouse/${table.value.databaseName}/${table.value.tableName}`
+    await tableApi.updateTable(table.value.id, {
+      ...editForm,
+      storageLocation
+    })
+    // 处理数据域关联变更
+    const oldCatalogId = (table.value as any).catalogId ?? null
+    if (selectedCatalogId.value !== oldCatalogId) {
+      if (oldCatalogId) {
+        await tableApi.removeTableFromCatalog(oldCatalogId, table.value.id).catch(() => {})
+      }
+      if (selectedCatalogId.value) {
+        await tableApi.addTableToCatalog(selectedCatalogId.value, table.value.id)
+      }
+    }
     ElMessage.success('更新成功')
     showEditDialog.value = false
     await loadData()
@@ -391,7 +431,15 @@ function nullRateColor(rate?: number) {
   return '#EF4444'
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadData()
+  try {
+    const res = await tableApi.getCatalogFlat()
+    catalogFlatList.value = (res as any)?.data?.data ?? (res as any)?.data ?? []
+  } catch {
+    catalogFlatList.value = []
+  }
+})
 </script>
 
 <style scoped>
